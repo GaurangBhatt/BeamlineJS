@@ -1,1 +1,9 @@
 .DS_Store
+node_modules
+npm-debug.log
+*.zip
+.idea
+*.iml
+*/coverage/lcov-report/**
+lcov.info
+*.tgz

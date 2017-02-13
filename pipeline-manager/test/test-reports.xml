@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="0.001" tests="1" failures="0">
+  <testsuite name="Root Suite" timestamp="2017-02-13T17:45:51" tests="0" failures="0" time="0">
+  </testsuite>
+  <testsuite name="Test - pipeline manager" timestamp="2017-02-13T17:45:51" tests="1" file="/Users/ksz163/Work/misc/Gaurang_Documents/work/LambdaJS-Pipeline/pipeline-manager/test/managerTest.js" failures="0" time="0.001">
+    <testcase name="Test - pipeline manager it should read fork push event" time="0.001" classname="it should read fork push event">
+    </testcase>
+  </testsuite>
+</testsuites>
