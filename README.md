@@ -1,4 +1,10 @@
 # LambdaJS-Pipeline
 CI/CD pipeline for NodeJS AWS Lambda functions
 
-## Fork Pipeline
+## Fork line
+
+## Development line
+
+## QA (staging) line
+
+## Production line
