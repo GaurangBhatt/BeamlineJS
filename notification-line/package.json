@@ -1,7 +1,7 @@
 {
-  "name": "pipeline-manager",
+  "name": "notification-line",
   "version": "1.0.0",
-  "description": "Manager to manage LambdaJS pipelines",
+  "description": "Function used for sending email and slack notifications",
   "main": "index.js",
   "engines": {
     "node": ">=0.10.0"
@@ -13,17 +13,20 @@
     "cover": "istanbul cover node_modules/.bin/_mocha -- -- test/*.js",
     "build": "npm run cleanup && npm install",
     "quality" : "jshint --reporter=node_modules/jshint-html-reporter/reporter.js *.js > jshint-report.html",
-    "package": "rm -f pipeline-manager*.zip && zip -qyr pipeline-manager-$npm_package_version.zip . -x@.lambdaignore",
+    "package": "rm -f notification-line*.zip && zip -qyr notification-line-$npm_package_version.zip . -x@.lambdaignore",
     "all": "npm run build && npm run quality && npm run cover && npm run package"
   },
-  "dependencies": {},
+  "dependencies": {
+    "https": "latest"
+  },
   "devDependencies": {
     "chai": "^3.5.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.1.2",
     "jshint" : "latest",
     "mocha-junit-reporter": "^1.13.0",
-    "jshint-html-reporter":"latest"
+    "jshint-html-reporter":"latest",
+    "https": "latest"
   },
   "repository": {
     "type": "git",

@@ -2,9 +2,8 @@
 
 const chai = require('chai');
 const should = chai.should();
-//const expect = chai.expect;
 const os = require('os');
-const manager = require('../index.js')
+const manager = require('../index.js');
 
 const fork_push_event = require('./git_events/fork_push_event.json');
 const invalid_push_event = require('./git_events/invalid_push_event.json');
