@@ -24,3 +24,4 @@ node_modules/mocha-junit-reporter/*
 node_modules/jshint/*
 node_modules/jshint-html-reporter/*
 jshint-report.html
+node_modules/aws-sdk/*

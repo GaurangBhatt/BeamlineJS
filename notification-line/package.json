@@ -7,26 +7,20 @@
     "node": ">=0.10.0"
   },
   "scripts": {
-    "cleanup": "rm -rf coverage/lcov-report/ coverage/lcov.info",
-    "test": "mocha --recursive --reporter mocha-junit-reporter test/** --reporter-options mochaFile=./test/test-reports.xml",
     "v": "node -p 'require(\"./package.json\").version'",
-    "cover": "istanbul cover node_modules/.bin/_mocha -- -- test/*.js",
-    "build": "npm run cleanup && npm install",
+    "build": "npm install",
     "quality" : "jshint --reporter=node_modules/jshint-html-reporter/reporter.js *.js > jshint-report.html",
     "package": "rm -f notification-line*.zip && zip -qyr notification-line-$npm_package_version.zip . -x@.lambdaignore",
-    "all": "npm run build && npm run quality && npm run cover && npm run package"
+    "all": "npm run build && npm run quality && npm run package"
   },
-  "dependencies": {
-    "https": "latest"
-  },
+  "dependencies": {},
   "devDependencies": {
     "chai": "^3.5.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.1.2",
     "jshint" : "latest",
     "mocha-junit-reporter": "^1.13.0",
-    "jshint-html-reporter":"latest",
-    "https": "latest"
+    "jshint-html-reporter":"latest"
   },
   "repository": {
     "type": "git",

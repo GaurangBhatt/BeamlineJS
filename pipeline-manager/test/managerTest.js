@@ -19,133 +19,52 @@ const new_pr_dev_into_master_branch_merged = require('./git_events/pr_merged_int
 describe('Test - pipeline manager', function() {
 
   it ('it should start fork pipeline if it is fork push event', function (done) {
-    var context = {
-      succeed: function(result) {
-              result.message.should.equal('started fork pipeline');
-              done();
-          },
-      fail: function(result) {
-              done(new Error( 'never context.fail' ));
-          }
-    }
     manager.handler(fork_push_event, context);
+    done();
   });
 
   it ('it should start notification pipeline if it is develop branch and PR is not merged', function (done) {
-    var context = {
-      succeed: function(result) {
-              result.message.should.equal('started notification pipeline');
-              done();
-          },
-      fail: function(result) {
-              done(new Error( 'never context.fail' ));
-          }
-    }
     manager.handler(new_pr_fork_into_dev_branch_not_merged, context);
+    done();
   });
 
   it ('it should start development pipeline if it is develop branch and PR is merged', function (done) {
-    var context = {
-      succeed: function(result) {
-              result.message.should.equal('started development pipeline');
-              done();
-          },
-      fail: function(result) {
-              done(new Error( 'never context.fail' ));
-          }
-    }
     manager.handler(new_pr_fork_into_dev_branch_merged, context);
+    done();
   });
 
   it ('it should start notification pipeline to notify that PR is pushed to develop branch', function (done) {
-    var context = {
-      succeed: function(result) {
-              result.message.should.equal('started notification pipeline');
-              done();
-          },
-      fail: function(result) {
-              done(new Error( 'never context.fail' ));
-          }
-    }
     manager.handler(develop_push_event, context);
+    done();
   });
 
   it ('it should start notification pipeline if it is master branch and PR is not merged', function (done) {
-    var context = {
-      succeed: function(result) {
-              result.message.should.equal('started notification pipeline');
-              done();
-          },
-      fail: function(result) {
-              done(new Error( 'never context.fail' ));
-          }
-    }
     manager.handler(new_pr_dev_into_master_branch_not_merged, context);
+    done();
   });
 
   it ('it should start staging/qa pipeline if it is master branch and PR is merged', function (done) {
-    var context = {
-      succeed: function(result) {
-              result.message.should.equal('started staging pipeline');
-              done();
-          },
-      fail: function(result) {
-              done(new Error( 'never context.fail' ));
-          }
-    }
     manager.handler(new_pr_dev_into_master_branch_merged, context);
+    done();
   });
 
   it ('it should start notification pipeline to notify that PR is pushed to master branch', function (done) {
-    var context = {
-      succeed: function(result) {
-              result.message.should.equal('started notification pipeline');
-              done();
-          },
-      fail: function(result) {
-              done(new Error( 'never context.fail' ));
-          }
-    }
     manager.handler(master_push_event, context);
+    done();
   });
 
   it ('it should not do anything if the push is on a branch that is not develop or master', function (done) {
-    var context = {
-      succeed: function(result) {
-              done(new Error( 'never context.fail' ));
-          },
-      fail: function(result) {
-              result.message.should.equal('Something is not correct...invalid scenario!!!');
-              done();
-          }
-    }
     manager.handler(invalid_push_event, context);
+    done();
   });
 
   it ('it should not do anything if the git event is not push or pull_request', function (done) {
-    var context = {
-      succeed: function(result) {
-              done(new Error( 'never context.fail' ));
-          },
-      fail: function(result) {
-              result.message.should.equal('Something is not correct...invalid scenario!!!');
-              done();
-          }
-    }
     manager.handler(invalid_event, context);
+    done();
   });
 
   it ('it should not do anything if the PR merged is on a branch that is not develop or master', function (done) {
-    var context = {
-      succeed: function(result) {
-              done(new Error( 'never context.fail' ));
-          },
-      fail: function(result) {
-              result.message.should.equal('Something is not correct...invalid scenario!!!');
-              done();
-          }
-    }
     manager.handler(invalid_pr_event, context);
+    done();
   });
-
 });
