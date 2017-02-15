@@ -6,7 +6,6 @@ exports.handler = function(event, context) {
     const snsEvent = event.Records[0].Sns;
     const eventType = ((snsEvent.MessageAttributes || {})['X-Github-Event'] || {}).Value;
     const snsMessage = JSON.parse(snsEvent.Message);
-    console.log(snsMessage);
     const params = {
         FunctionName: 'arn:aws:lambda:us-east-1:686218048045:function:slack-notify',
         InvocationType: 'RequestResponse',
