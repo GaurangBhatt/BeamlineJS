@@ -8,8 +8,14 @@ exports.handler = function(event, context) {
     const snsMessage = JSON.parse(snsEvent.Message);
     const params = {
         FunctionName: 'arn:aws:lambda:us-east-1:686218048045:function:slack-notify',
-        InvocationType: 'RequestResponse',
+        InvocationType: 'Event', //async InvocationType
         LogType: 'Tail'
+    };
+
+    const fork_line_params = {
+      FunctionName: 'arn:aws:lambda:us-east-1:686218048045:function:fork-line',
+      InvocationType: 'Event', //async InvocationType
+      LogType: 'Tail'
     };
 
     if (eventType == 'push') {
@@ -34,21 +40,29 @@ exports.handler = function(event, context) {
           slackMessage += " modified:" + snsMessage.commits[i].modified + "\n";
         }
       }
-      params.Payload=JSON.stringify({"Subject": slackSub, "Message": slackMessage});
+      params.Payload = JSON.stringify({"Subject": slackSub, "Message": slackMessage});
       if (snsMessage.repository.fork === true && snsMessage.ref === 'refs/heads/develop') {
           lambda.invoke(params, (err, result) => {
             if (err) {
               context.fail({message:"Failed to notify slack channel"});
-            } else {
-              context.succeed({message: "Started fork pipeline" });
             }
+          });
+
+          var clone_url = snsMessage.repository.clone_url;
+          var repo_name = snsMessage.repository.name;
+          fork_line_params.Payload = JSON.stringify({"GIT_HUB_REPO_URL": clone_url, "PROJECT_NAME": repo_name});
+          lambda.invoke(fork_line_params, function(error, data){
+            if (error) {
+              context.fail({message:"Failed to start fork pipeline"});
+            }
+            context.succeed({message:"Fork pipeline started"});
           });
       } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/develop') {
           lambda.invoke(params, (err, result) => {
             if (err) {
               context.fail({message:"Failed to notify slack channel"});
             } else {
-              context.succeed({message: "Change was pushed to develop branch" });
+              context.succeed({message: "Change was pushed to develop branch because of a merge" });
             }
           });
       } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/master') {
@@ -56,7 +70,7 @@ exports.handler = function(event, context) {
             if (err) {
               context.fail({message:"Failed to notify slack channel"});
             } else {
-              context.succeed({message: "Change was pushed to master branch" });
+              context.succeed({message: "Change was pushed to master branch because of a merge" });
             }
           });
       } else {

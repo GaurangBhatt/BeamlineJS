@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>JSHint Report</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container-fluid">
+    <table class="table table-hover">
+        <tr>
+            <th class="text-center">Code</th>
+            <th class="text-center">Line</th>
+            <th class="text-center">Column</th>
+            <th>Evidence</th>
+            <th>Reason</th>
+        </tr>
+        <tr><td colspan="5"><b>index.js</b></td></tr><tr class="warning">
+    <td class="text-center">W119</td>
+    <td class="text-center">3</td>
+    <td class="text-center">44</td>
+    <td><code>exports.handler &#61; &#40;event&#44; context&#44; callback&#41; &#61;&gt; &#123;</code></td>
+    <td>&#39;arrow function syntax &#40;&#61;&gt;&#41;&#39; is only available in ES6 &#40;use &#39;esversion: 6&#39;&#41;.</td>
+</tr><tr class="warning">
+    <td class="text-center">W033</td>
+    <td class="text-center">4</td>
+    <td class="text-center">20</td>
+    <td><code>    var result &#61; &#123;&#125;</code></td>
+    <td>Missing semicolon.</td>
+</tr><tr class="warning">
+    <td class="text-center">W033</td>
+    <td class="text-center">13</td>
+    <td class="text-center">11</td>
+    <td><code>        &#125;&#41;</code></td>
+    <td>Missing semicolon.</td>
+</tr><tr class="warning">
+    <td class="text-center">W033</td>
+    <td class="text-center">16</td>
+    <td class="text-center">23</td>
+    <td><code>        context.done&#40;&#41;</code></td>
+    <td>Missing semicolon.</td>
+</tr>
+    </table>
+    <div class="well">
+    Found <span class="label label-default">4</span> failures - <span class="label label-danger">0 errors</span> &amp; <span class="label label-warning">4 warnings</span>
+</div>
+</div>
+
+</body>
+</html>

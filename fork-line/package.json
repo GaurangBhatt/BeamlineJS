@@ -1,0 +1,40 @@
+{
+  "name": "pipeline-manager",
+  "version": "1.0.0",
+  "description": "Manager to manage LambdaJS pipelines",
+  "main": "index.js",
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "scripts": {
+    "build": "npm install",
+    "quality" : "jshint --reporter=node_modules/jshint-html-reporter/reporter.js *.js > jshint-report.html",
+    "package": "rm -f fork-line*.zip && zip -qyr fork-line-$npm_package_version.zip . -x@.lambdaignore",
+    "all": "npm run build && npm run package"
+  },
+  "dependencies": {
+    "lambda-git":"latest",
+    "archiver":"latest"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.1.2",
+    "jshint" : "latest",
+    "mocha-junit-reporter": "^1.13.0",
+    "jshint-html-reporter":"latest",
+    "aws-sdk":"latest",
+    "lambda-git":"latest",
+    "archiver":"latest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GaurangBhatt/LambdaJS-Pipeline.git"
+  },
+  "author": "gaurang.bhatt04@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GaurangBhatt/LambdaJS-Pipeline/issues"
+  },
+  "homepage": "https://github.com/GaurangBhatt/LambdaJS-Pipeline#readme"
+}
