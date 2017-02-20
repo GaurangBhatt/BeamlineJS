@@ -91,12 +91,12 @@ exports.handler = function(event, context) {
       var pr_slackSubject = "[" + pr_repo_full_name + "]:";
 
       if (pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
-        pr_slackSubject += " New PR opened by " + pr_username + " URL <" + pr_url + ">";
+        pr_slackSubject += " New PR opened by " + pr_username + " URL <" + pr_url + "|Link to pull request>";
       } if (pull_request.merged === false && snsMessage.action === 'closed') {
-        pr_slackSubject += " PR URL <" + pr_url + ">" + " is closed by " + pr_username;
+        pr_slackSubject += " PR URL <" + pr_url + "|Link to pull request>" + " is closed by " + pr_username;
       } else if (pull_request.merged === true && snsMessage.action === 'closed'){
         var mergedBy = pull_request.merged_by.login;
-        pr_slackSubject += " PR URL <" + pr_url + ">" + " is merged by " + mergedBy;
+        pr_slackSubject += " PR URL <" + pr_url + "|Link to pull request>" + " is merged by " + mergedBy;
       }
       if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'develop' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
         params.Payload=JSON.stringify({"Subject":pr_slackSubject, "Message":"A new pull request was created for merge into develop branch. Please review and merge!!!"});

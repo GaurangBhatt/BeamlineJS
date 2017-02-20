@@ -1,9 +1,9 @@
-var argv = require('yargs').argv;
-var fs = require('fs');
-var archiver = require('archiver');
+const argv = require('yargs').argv;
+const fs = require('fs');
+const archiver = require('archiver');
 
-var build_dir = argv.build_dir;
-var project_name = argv.project_name;
+const build_dir = argv.build_dir;
+const project_name = argv.project_name;
 
 zip = function() {
   // create a file to stream archive data to.
