@@ -1,5 +1,5 @@
-# LambdaJS-Pipeline
-CI/CD pipeline for NodeJS AWS Lambda functions
+# BeanlineJS
+CI/CD pipeline for AWS Lambda functions with NodeJS runtime
 
 * You will need AWS Account
 * You will need GitHub Account
