@@ -4,3 +4,6 @@ npm run all
 
 cd ../notification-line
 npm run all
+
+cd ../fork-line
+npm run all

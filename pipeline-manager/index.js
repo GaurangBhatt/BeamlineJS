@@ -1,22 +1,19 @@
 /*jshint esversion: 6 */
-const aws = require('aws-sdk');
-const lambda = new aws.Lambda({region: 'us-east-1'});
+const LambdaSDK = require('./lambdaSDK.js');
 
 exports.handler = function(event, context) {
     const snsEvent = event.Records[0].Sns;
     const eventType = ((snsEvent.MessageAttributes || {})['X-Github-Event'] || {}).Value;
     const snsMessage = JSON.parse(snsEvent.Message);
-    const params = {
-        FunctionName: 'arn:aws:lambda:us-east-1:686218048045:function:slack-notify',
-        InvocationType: 'Event', //async InvocationType
-        LogType: 'Tail'
-    };
-
+    const slackARN = 'arn:aws:lambda:us-east-1:686218048045:function:slack-notify';
     const fork_line_params = {
       FunctionName: 'arn:aws:lambda:us-east-1:686218048045:function:fork-line',
       InvocationType: 'Event', //async InvocationType
       LogType: 'Tail'
     };
+    var mess = '';
+    var sub = '';
+    this.lambda = new LambdaSDK();
 
     if (eventType == 'push') {
       const username = snsMessage.commits[0].author.username;
@@ -40,48 +37,28 @@ exports.handler = function(event, context) {
           slackMessage += " modified:" + snsMessage.commits[i].modified + "\n";
         }
       }
-      params.Payload = JSON.stringify({"Subject": slackSub, "Message": slackMessage});
       if (snsMessage.repository.fork === true && snsMessage.ref === 'refs/heads/develop') {
-          lambda.invoke(params, (err, result) => {
-            if (err) {
-              context.fail({message:"Failed to notify slack channel"});
-            }
-          });
-
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
           var clone_url = snsMessage.repository.clone_url;
           var repo_name = snsMessage.repository.name;
+          /*
           fork_line_params.Payload = JSON.stringify({"GIT_HUB_REPO_URL": clone_url, "PROJECT_NAME": repo_name});
-          lambda.invoke(fork_line_params, function(error, data){
+          this.lambda.invoke(fork_line_params, function(error, data){
             if (error) {
               context.fail({message:"Failed to start fork pipeline"});
             }
             context.succeed({message:"Fork pipeline started"});
           });
+          */
+
       } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/develop') {
-          lambda.invoke(params, (err, result) => {
-            if (err) {
-              context.fail({message:"Failed to notify slack channel"});
-            } else {
-              context.succeed({message: "Change was pushed to develop branch because of a merge" });
-            }
-          });
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
       } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/master') {
-          lambda.invoke(params, (err, result) => {
-            if (err) {
-              context.fail({message:"Failed to notify slack channel"});
-            } else {
-              context.succeed({message: "Change was pushed to master branch because of a merge" });
-            }
-          });
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
       } else {
-        params.Payload=JSON.stringify({"Subject":"Pipeline Error", "Message":"Pipeline request was received but with errors. Pipeline only accepts changes from a Fork with develop branch, develop branch and master branch"});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "Something is not correct...invalid scenario!!!" });
-          }
-        });
+        sub = "Pipeline Error";
+        mess = "Pipeline request was received but with errors. Pipeline only accepts changes from a Fork with develop branch, develop branch and master branch";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": sub, "Message": mess});
       }
     } else if (eventType == 'pull_request') {
       var pull_request = snsMessage.pull_request;
@@ -98,81 +75,39 @@ exports.handler = function(event, context) {
         var mergedBy = pull_request.merged_by.login;
         pr_slackSubject += " PR URL <" + pr_url + "|Link to pull request>" + " is merged by " + mergedBy;
       }
+
       if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'develop' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
-        params.Payload=JSON.stringify({"Subject":pr_slackSubject, "Message":"A new pull request was created for merge into develop branch. Please review and merge!!!"});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "New pull request created on develop branch" });
-          }
-        });
+        mess = "A new pull request was created for merge into develop branch. Please review and merge!!!";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
 
       } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'develop' && pull_request.merged === false && snsMessage.action === 'closed') {
-        params.Payload=JSON.stringify({"Subject":pr_slackSubject, "Message":"Pull request was closed on develop branch."});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "New pull request created on develop branch" });
-          }
-        });
+        mess = "Pull request was closed on develop branch.";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
 
       } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'develop' && pull_request.merged === true) {
-        params.Payload=JSON.stringify({"Subject":pr_slackSubject, "Message":"Pull request was merged into develop branch. Starting development pipeline"});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "Development pipeline started" });
-          }
-        });
+        mess = "Pull request was merged into develop branch. Starting development pipeline";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
 
       } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'master' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
-        params.Payload=JSON.stringify({"Subject":pr_slackSubject, "Message":"A new pull request was created for merge into master branch. Please review and merge!!!"});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "New pull request created on master branch" });
-          }
-        });
+        mess = "A new pull request was created for merge into master branch. Please review and merge!!!";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
+
       } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'master' && pull_request.merged === false && snsMessage.action === 'closed') {
-        params.Payload=JSON.stringify({"Subject":pr_slackSubject, "Message":"Pull request was closed on master branch."});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "New pull request created on master branch" });
-          }
-        });
+        mess = "Pull request was closed on master branch.";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
+
       } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'master' && pull_request.merged === true) {
-        params.Payload=JSON.stringify({"Subject":pr_slackSubject, "Message":"Pull request was merged into master branch. Starting staging (QA) pipeline"});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "Staging pipeline started" });
-          }
-        });
+        mess = "Pull request was merged into master branch. Starting staging (QA) pipeline";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
+
       } else {
-        params.Payload=JSON.stringify({"Subject":"Pipeline Error", "Message":"Pipeline request was received but with errors. Pipeline only accepts changes from pull requests on develop and master branch"});
-        lambda.invoke(params, (err, result) => {
-          if (err) {
-            context.fail({message:"Failed to notify slack channel"});
-          } else {
-            context.succeed({message: "Something is not correct...invalid scenario!!!" });
-          }
-        });
+        sub = "Pipeline Error";
+        mess = "Pipeline request was received but with errors. Pipeline only accepts changes from pull requests on develop and master branch";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": sub, "Message": mess});
       }
     } else {
-      params.Payload=JSON.stringify({"Subject":"Pipeline Error", "Message":"Pipeline request was received but with errors. Pipeline only accepts changes from pull requests on develop and master branch"});
-      lambda.invoke(params, (err, result) => {
-        if (err) {
-          context.fail({message:"Failed to notify slack channel"});
-        } else {
-          context.succeed({message: "Something is not correct...invalid scenario!!!" });
-        }
-      });
+      sub = "Pipeline Error";
+      mess = "Pipeline request was received but with errors. Pipeline only accepts changes from pull requests on develop and master branch";
+      this.lambda.invokeByRequest(slackARN, null, {"Subject": sub, "Message": mess});
     }
 };

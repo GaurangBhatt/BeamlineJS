@@ -8,7 +8,6 @@ exports.handler = function(event, context) {
         "text": "*" + event.Subject + "*",
         "icon_emoji": ":ghost:"
     };
-
     var message = event.Message;
     var severity = "good";
     var dangerMessages = [
@@ -17,7 +16,6 @@ exports.handler = function(event, context) {
         "Failed to deploy configuration",
         "has failed"
     ];
-
     var warningMessages = [
         "is currently running"
     ];
@@ -40,10 +38,10 @@ exports.handler = function(event, context) {
     }
 
     postData.attachments = [
-        {
-            "color": severity,
-            "text": message
-        }
+      {
+          "color": severity,
+          "text": message
+      }
     ];
 
     var options = {
