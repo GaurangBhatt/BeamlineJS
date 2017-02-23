@@ -1,7 +1,7 @@
 {
-  "name": "beamline",
+  "name": "pipeline-manager",
   "version": "1.0.0",
-  "description": "CI and CD pipeline of NodeJS lambda function",
+  "description": "Manager to manage LambdaJS pipelines",
   "main": "index.js",
   "engines": {
     "node": ">=0.10.0"
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm install",
     "quality" : "jshint --reporter=node_modules/jshint-html-reporter/reporter.js *.js > jshint-report.html",
-    "package": "rm -f beamline*.zip && zip -qyr beamline-$npm_package_version.zip . -x@.lambdaignore",
+    "package": "rm -f fork-line*.zip && zip -qyr fork-line-$npm_package_version.zip . -x@.lambdaignore",
     "all": "npm run build && npm run package"
   },
   "dependencies": {
@@ -29,12 +29,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GaurangBhatt/BeamlineJS.git"
+    "url": "git+https://github.com/GaurangBhatt/LambdaJS-Pipeline.git"
   },
   "author": "gaurang.bhatt04@gmail.com",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/GaurangBhatt/BeamlineJS/issues"
+    "url": "https://github.com/GaurangBhatt/LambdaJS-Pipeline/issues"
   },
-  "homepage": "https://github.com/GaurangBhatt/BeamlineJS#readme"
+  "homepage": "https://github.com/GaurangBhatt/LambdaJS-Pipeline#readme"
 }

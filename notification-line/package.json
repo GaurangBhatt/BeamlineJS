@@ -24,12 +24,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GaurangBhatt/LambdaJS-Pipeline.git"
+    "url": "git+https://github.com/GaurangBhatt/BeamlineJS.git"
   },
   "author": "gaurang.bhatt04@gmail.com",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/GaurangBhatt/LambdaJS-Pipeline/issues"
+    "url": "https://github.com/GaurangBhatt/BeamlineJS/issues"
   },
-  "homepage": "https://github.com/GaurangBhatt/LambdaJS-Pipeline#readme"
+  "homepage": "https://github.com/GaurangBhatt/BeamlineJS#readme"
 }
