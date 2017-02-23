@@ -1,5 +1,4 @@
 /*jshint esversion: 6 */
-
 /**
 * This code is taken from Jeff Sharpe's Lambda Crane
 */
@@ -98,7 +97,7 @@ LambdaSDK.prototype.updateLambdaConfiguration = function(functionName, handler, 
         var params = {
             FunctionName: functionName,
             Handler: handler,
-            Role: role
+            Role: role,
             Description: description,
             MemorySize: memorySize,
             Timeout: timeout

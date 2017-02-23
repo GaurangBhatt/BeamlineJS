@@ -1,4 +1,14 @@
 /*jshint esversion: 6 */
+
+// add stage add security scan
+// add stage add Artemis integration
+// add stage run integration/QA tests after version relase and manage alias
+// send artifacts to slack channel (won't work with webhook, need to use token)
+// move everything to yaml configuration - validate yaml config file
+// add stage function code & configuraiton SHA verification
+// add stage for creating new branch and PR
+// take care of multi-region deployment
+
 const path = require('path');
 const execSync = require('child_process').execSync;
 const git = require('lambda-git')({targetDirectory: "/tmp/pipeline/git"});
@@ -13,6 +23,96 @@ var logUrl = function(logGroupName,logStreamName, startTime) {
     `group=${encodeURIComponent(logGroupName)};` +
     `stream=${encodeURIComponent(logStreamName)};` +
     `start=${encodeURIComponent(startTime.toISOString().slice(0, 19))}Z`
+};
+
+var testFunction = function(lambda, functionName, slackARN, slackSub, payload, callback) {
+  // smoke testing deployed lambda function
+  this.lambda.getFunctionInfo(functionName)
+  .then(function (functionData) {
+      this.lambda.invokeByRequest(functionData.functionName, null, payload)
+      .then(function (data) {
+        slackMessage = "Stage: Testing of lambda function completed";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+        callback(data);
+      })
+      .catch(function (err) {
+        console.log("ERROR: " + err);
+        slackMessage = "Stage: Testing of lambda function has failed";
+        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+        callback(err);
+      });
+  })
+  .catch(function (err) {
+    console.log("ERROR: " + err);
+    slackMessage = "Stage: Testing of lambda function has failed because function does not exists";
+    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+    callback(err);
+  });
+};
+
+var publishVersion = function(lambda, functionName, slackARN, slackSub, callback) {
+  // publish the latest version
+  this.lambda.publishVersion(functionName, function (version) {
+    console.log("published version: " + version);
+    slackMessage = "Stage: Publish new version of lambda function completed";
+    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+    callback(version);
+  });
+};
+
+var manageAliases = function(lambda, functionName, version, slackARN, slackSub, callback) {
+  this.lambda.getAliases(functionName)
+  .then(function(aliasData) {
+      console.log(aliasData);
+      if (aliasData === undefined || (aliasData.CURR_STABLE === undefined && aliasData.LAST_STABLE === undefined)) {
+        //create new CURR_STABLE alias
+        this.lambda.createAlias(functionName, 'CURR_STABLE', version)
+        .then(function(currStableAliasData){
+          console.log(currStableAliasData);
+          // create new LAST_STABLE alias
+          this.lambda.createAlias(functionName, 'LAST_STABLE', version)
+          .then(function(lastStableAliasData) {
+            console.log(lastStableAliasData);
+            slackMessage = "Stage: CURR_STABLE and LAST_STABLE aliases created with version:" + version;
+            this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+            callback("aliases created");
+          })
+          .catch(function(lastStableAliasError) {
+            console.log("ERROR: " + lastStableAliasError)
+            callback(lastStableAliasError);
+          });
+        })
+        .catch(function(currStableAliasError){
+          console.log("ERROR: " + currStableAliasError)
+          callback(currStableAliasError);
+        });
+      } else {
+        //update CURR_STABLE alias version
+        this.lambda.updateAlias(functionName, 'CURR_STABLE', version)
+        .then(function(updateCurrStableAliasData) {
+          console.log(updateCurrStableAliasData);
+          // update LAST_STABLE alias version
+          this.lambda.updateAlias(functionName, 'LAST_STABLE', aliasData.CURR_STABLE)
+          .then(function(updateLastStableAliasData) {
+            console.log(updateLastStableAliasData);
+            slackMessage = "Stage: Update aliases completed. CURR_STABLE alias is: " + version + " and LAST_STABLE alias is: " + aliasData.CURR_STABLE;
+            this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+            callback("alias versions updated");
+          })
+          .catch(function(updateLastStableAliasError) {
+            console.log("ERROR: " + updateLastStableAliasError)
+            callback(updateLastStableAliasError);
+          });
+        })
+        .catch(function(updateCurrStableAliasError){
+          console.log("ERROR: " + updateCurrStableAliasError);
+          callback(updateCurrStableAliasError);
+        });
+      }
+  })
+  .catch(function(err) {
+      console.log(err);
+  });
 };
 
 exports.handler = function (event, context) {
@@ -83,7 +183,16 @@ exports.handler = function (event, context) {
   slackMessage += "\nStage: Deployment package created and uploaded to S3 bucket ";
   this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
 
-  // create/update lambda function stage
+  /**
+  * Need to learn how to clean up this below code....nested hell :-(
+  * Below code will
+  * a) create a lambda function if it does not exists OR
+  * b) update function code and configuration if it already exists
+  * c) perform smoke testing after delployment on ${LATEST} version
+  * d) if test is successful then publish new version
+  * e) Set CURR_STABLE & LAST_STABLE alias to new version if this is first version of the function
+  *    else set CURR_STABLE to new version and LAST_STABLE to previous CURR_STABLE version.
+  */
   this.lambda.getFunctionInfo('arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang')
   .then(function (functionData) {
       console.log("updating function code and configuration");
@@ -91,34 +200,48 @@ exports.handler = function (event, context) {
         functionData.functionName, "beamline-bucket",
         "RELEASE/FORK/" + process.env.PROJECT_NAME + "-"+ process.env.USER_ID + ".zip"
       )
-      .then(function (data){
+      .then(function (data) {
         slackMessage = "Stage: Lambda function code is updated";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+        // update function configuration
+        this.lambda.updateLambdaConfiguration(
+          functionData.functionName,
+          "index.handler",
+          "arn:aws:iam::686218048045:role/lambda_role",
+          "Sample function",
+          128,
+          30
+        )
+        .then(function (data) {
+          slackMessage = "Stage: Lambda function configuration is updated";
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+          // test deployed function & configuration
+          testFunction(this.lambda, 'arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang', slackARN, slackSub, {}, function(result) {
+            console.log(result);
+            if (result.StatusCode === 200) {
+              // publish new Version
+              publishVersion(this.lambda, 'arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang', slackARN, slackSub, function(version) {
+                manageAliases(this.lambda, 'arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang', version, slackARN, slackSub, function(aliasData) {
+                  console.log(aliasData);
+                });
+              });
+            } else {
+              context.fail("Stage: Testing of lambda function has failed")
+            }
+          });
+        })
+        .catch(function (error) {
+          console.log("ERROR: " + error);
+          slackMessage = "Stage: Update lambda function configuration has failed";
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+          context.fail("Stage: Update lambda function configuration has failed");
+        });
       })
-      .catch(function (error){
+      .catch(function (error) {
         console.log("ERROR: " + error);
         slackMessage = "Stage: Update lambda function code has failed";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
         context.fail("Stage: Update lambda function code has failed");
-      });
-
-      this.lambda.updateLambdaConfiguration(
-        functionData.functionName,
-        "index.handler",
-        "arn:aws:iam::686218048045:role/lambda_role",
-        "Sample function",
-        128,
-        30
-      )
-      .then(function (data){
-        slackMessage = "Stage: Lambda function configuration is updated";
-        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-      })
-      .catch(function (error){
-        console.log("ERROR: " + error);
-        slackMessage = "Stage: Update lambda function configuration has failed";
-        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-        context.fail("Stage: Update lambda function configuration has failed");
       });
   })
   .catch(function (err) {
@@ -135,11 +258,23 @@ exports.handler = function (event, context) {
               30,
               "Sample function"
           )
-          .then(function (data){
+          .then(function (data) {
             slackMessage = "Stage: Lambda function code & configuration is deployed";
             this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+            testFunction(this.lambda, 'arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang', slackARN, slackSub, {}, function(result) {
+              if (result.StatusCode === 200) {
+                // publish new Version
+                publishVersion(this.lambda, 'arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang', slackARN, slackSub, function(version) {
+                  manageAliases(this.lambda, 'arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang', version, slackARN, slackSub, function(aliasData) {
+                    console.log(aliasData);
+                  });
+                });
+              } else {
+                context.fail("Stage: Testing of lambda function has failed")
+              }
+            });
           })
-          .catch(function (error){
+          .catch(function (error) {
             console.log("ERROR: "+ error);
             slackMessage = "Stage: Create lambda function code & configuration has failed";
             this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
@@ -147,36 +282,6 @@ exports.handler = function (event, context) {
           });
       }
   });
-
-  // smoke testing deployed lambda function
-  this.lambda.getFunctionInfo('arn:aws:lambda:us-east-1:686218048045:function:sample-lambda-gaurang')
-  .then(function (functionData) {
-      this.lambda.invokeByRequest(functionData.functionName, null, {})
-      .then(function (data) {
-        slackMessage = "Stage: Testing of lambda function completed";
-        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-      })
-      .catch(function (err) {
-        console.log("ERROR: " + err);
-        slackMessage = "Stage: Testing of lambda function has failed";
-        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-        context.fail("Failed to invoke lambda function:" + err.message);
-      });
-  })
-  .catch(function (err) {
-    console.log("ERROR: " + err);
-    slackMessage = "Stage: Testing of lambda function has failed because function";
-    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-    context.fail(err.message);
-  });
-
-  // publish the latest version
-  let publishedVersion = null;
-
-  // create/update alias
-
-
-  // How do I maintain state in GitHub repo??
 
   // add more stages
   console.log("all stages completed.");
