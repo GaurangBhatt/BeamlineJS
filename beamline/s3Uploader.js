@@ -1,3 +1,5 @@
+/*jshint esversion: 6 */
+
 const path = require('path');
 const async = require('async');
 const fs = require('fs');
@@ -10,7 +12,7 @@ const absoluteFilePath = argv.abs_file_path;
 const fileName = argv.fileName;
 
 function uploadMultipart(uploadCb) {
-  s3.createMultipartUpload({ Bucket: bucketName, Key: fileName }, (mpErr, multipart) => {
+  s3.createMultipartUpload({ Bucket: bucketName, Key: fileName, ServerSideEncryption: 'AES256' }, (mpErr, multipart) => {
     if(!mpErr){
       console.log("multipart created", multipart.UploadId);
       fs.readFile(absoluteFilePath, (err, fileData) => {
@@ -64,7 +66,8 @@ function uploadFile(uploadCb) {
         s3.putObject({
           Bucket: bucketName,
           Key: fileName,
-          Body: fileData
+          Body: fileData,
+          ServerSideEncryption: 'AES256'
         }, retryCb);
       });
     }, uploadCb);

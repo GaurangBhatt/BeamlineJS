@@ -2,15 +2,18 @@
 const LambdaSDK = require('./lambdaSDK.js');
 
 exports.handler = function(event, context) {
+    console.log(JSON.stringify(event, null, 2));
     const snsEvent = event.Records[0].Sns;
     const eventType = ((snsEvent.MessageAttributes || {})['X-Github-Event'] || {}).Value;
     const snsMessage = JSON.parse(snsEvent.Message);
-    const slackARN = 'arn:aws:lambda:us-east-1:686218048045:function:slack-notify';
-    const fork_line_params = {
-      FunctionName: 'arn:aws:lambda:us-east-1:686218048045:function:fork-line',
-      InvocationType: 'Event', //async InvocationType
-      LogType: 'Tail'
-    };
+    console.log(snsEvent.Message);
+
+    const invokedFunctionARN = context.invokedFunctionArn;
+    const arnItems = invokedFunctionARN.split(":");
+    const region = arnItems[3];
+    const accountID = arnItems[4];
+    const slackARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:slack-notify";
+    const beamLineARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:beamlineJS";
     var mess = '';
     var sub = '';
     this.lambda = new LambdaSDK();
@@ -41,15 +44,14 @@ exports.handler = function(event, context) {
           this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
           var clone_url = snsMessage.repository.clone_url;
           var repo_name = snsMessage.repository.name;
-          /*
-          fork_line_params.Payload = JSON.stringify({"GIT_HUB_REPO_URL": clone_url, "PROJECT_NAME": repo_name});
-          this.lambda.invoke(fork_line_params, function(error, data){
-            if (error) {
-              context.fail({message:"Failed to start fork pipeline"});
-            }
-            context.succeed({message:"Fork pipeline started"});
+          var sender = snsMessage.sender.login;
+          var organization = snsMessage.organization.login;
+          this.lambda.invokeByRequest(beamLineARN, null, {
+              "GIT_HUB_REPO_URL": repo_full_name,
+              "PROJECT_NAME": repo_name,
+              "userId": sender,
+              "organization": organization
           });
-          */
 
       } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/develop') {
           this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});

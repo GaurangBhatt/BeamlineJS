@@ -175,6 +175,7 @@ LambdaSDK.prototype.publishVersion = function(functionName, notify) {
 LambdaSDK.prototype.getAliases = function(functionName) {
     // Keep a local copy of this, because the Promise eats it.
     var sdk = this;
+    console.log("Get aliases of:" + functionName);
     return new Promise(function(resolve, reject) {
         sdk.api.listAliases({ FunctionName: functionName }, function(err, aliasData) {
             if (err !== null) reject(err);
