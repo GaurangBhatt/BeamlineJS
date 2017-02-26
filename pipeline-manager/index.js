@@ -17,32 +17,40 @@ exports.handler = function(event, context) {
     var mess = '';
     var sub = '';
     this.lambda = new LambdaSDK();
-
-    if (eventType == 'push') {
-      const username = snsMessage.commits[0].author.username;
-      const totalCommits = snsMessage.commits.length;
+    console.log("EVENT TYPE:" + eventType);
+    if (eventType === 'push') {
       const repo_full_name = snsMessage.repository.full_name;
-      var slackSub = "[" + repo_full_name + "]: " +  totalCommits + " commit(s) by " + username + " ";
-      if(totalCommits > 1) {
-        var others = totalCommits - 1;
-        slackSub += "and " + others + " others";
-      }
-      var slackMessage = "Commits:";
-      for(var i = 0; i < totalCommits; i++) {
-        slackMessage += snsMessage.commits[i].message + "\n";
-        if (snsMessage.commits[i].added.length > 0) {
-          slackMessage += " added:" + snsMessage.commits[i].added + "\n";
+      if (snsMessage.repository.fork === true && snsMessage.base_ref === 'refs/heads/develop' && snsMessage.ref.startsWith("refs/heads/pr-") && snsMessage.created === true) {
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": "[" + repo_full_name + "]: ", "Message": "New PR branch " + snsMessage.ref + " created by: " + snsMessage.sender.login});
+      } else if (snsMessage.repository.fork === true && snsMessage.base_ref === null && snsMessage.ref.startsWith("refs/heads/pr-") && snsMessage.deleted === true) {
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": "[" + repo_full_name + "]: ", "Message": "PR branch " + snsMessage.ref + " deleted by: " + snsMessage.sender.login});
+      } else if (snsMessage.repository.fork === false && snsMessage.base_ref === 'refs/heads/develop' && snsMessage.ref.startsWith("refs/heads/pr-") && snsMessage.created === true) {
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": "[" + repo_full_name + "]: ", "Message": "New PR branch " + snsMessage.ref + " created by: " + snsMessage.sender.login});
+      } else if (snsMessage.repository.fork === false && snsMessage.base_ref === null && snsMessage.ref.startsWith("refs/heads/pr-") && snsMessage.deleted === true) {
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": "[" + repo_full_name + "]: ", "Message": "PR branch " + snsMessage.ref + " deleted by: " + snsMessage.sender.login});
+      } else {
+        const username = snsMessage.commits[0].author.username;
+        const totalCommits = snsMessage.commits.length;
+        var slackSub = "[" + repo_full_name + "]: " +  totalCommits + " commit(s) by " + username + " ";
+        if(totalCommits > 1) {
+          var others = totalCommits - 1;
+          slackSub += "and " + others + " others";
         }
-        if (snsMessage.commits[i].removed.length > 0) {
-          slackMessage += " removed:" + snsMessage.commits[i].removed + "\n";
+        var slackMessage = "Commits:";
+        for(var i = 0; i < totalCommits; i++) {
+          slackMessage += snsMessage.commits[i].message + "\n";
+          if (snsMessage.commits[i].added.length > 0) {
+            slackMessage += " added:" + snsMessage.commits[i].added + "\n";
+          }
+          if (snsMessage.commits[i].removed.length > 0) {
+            slackMessage += " removed:" + snsMessage.commits[i].removed + "\n";
+          }
+          if (snsMessage.commits[i].modified.length > 0) {
+            slackMessage += " modified:" + snsMessage.commits[i].modified + "\n";
+          }
         }
-        if (snsMessage.commits[i].modified.length > 0) {
-          slackMessage += " modified:" + snsMessage.commits[i].modified + "\n";
-        }
-      }
-      if (snsMessage.repository.fork === true && snsMessage.ref === 'refs/heads/develop') {
+        if (snsMessage.repository.fork === true && snsMessage.ref === 'refs/heads/develop' && snsMessage.created === false && snsMessage.deleted === false) {
           this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-          var clone_url = snsMessage.repository.clone_url;
           var repo_name = snsMessage.repository.name;
           var sender = snsMessage.sender.login;
           var organization = snsMessage.organization.login;
@@ -50,19 +58,20 @@ exports.handler = function(event, context) {
               "GIT_HUB_REPO_URL": repo_full_name,
               "PROJECT_NAME": repo_name,
               "userId": sender,
-              "organization": organization
+              "organization": organization,
+              "pipeline": "fork"
           });
-
-      } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/develop') {
-          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-      } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/master') {
-          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-      } else {
-        sub = "Pipeline Error";
-        mess = "Pipeline request was received but with errors. Pipeline only accepts changes from a Fork with develop branch, develop branch and master branch";
-        this.lambda.invokeByRequest(slackARN, null, {"Subject": sub, "Message": mess});
+        } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/develop') {
+            this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+        } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/master') {
+            this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+        } else {
+          sub = "Pipeline Error";
+          mess = "Pipeline request was received but with errors. Pipeline only accepts changes from a Fork with develop branch, develop branch and master branch";
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": sub, "Message": mess});
+        }
       }
-    } else if (eventType == 'pull_request') {
+    } else if (eventType === 'pull_request') {
       var pull_request = snsMessage.pull_request;
       var pr_repo_full_name = snsMessage.repository.full_name;
       var pr_url = pull_request.html_url;
@@ -78,29 +87,51 @@ exports.handler = function(event, context) {
         pr_slackSubject += " PR URL <" + pr_url + "|Link to pull request>" + " is merged by " + mergedBy;
       }
 
-      if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'develop' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
+      if (pull_request.base.repo.fork === false && (pull_request.head.ref === 'develop' || pull_request.head.ref.startsWith("pr-")) && pull_request.base.ref === 'develop' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
         mess = "A new pull request was created for merge into develop branch. Please review and merge!!!";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
 
-      } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'develop' && pull_request.merged === false && snsMessage.action === 'closed') {
+      } else if (pull_request.base.repo.fork === false && (pull_request.head.ref === 'develop' || pull_request.head.ref.startsWith("pr-")) && pull_request.base.ref === 'develop' && pull_request.merged === false && snsMessage.action === 'closed') {
         mess = "Pull request was closed on develop branch.";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
 
-      } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'develop' && pull_request.merged === true) {
+      } else if (pull_request.base.repo.fork === false && (pull_request.head.ref === 'develop' || pull_request.head.ref.startsWith("pr-")) && pull_request.base.ref === 'develop' && pull_request.merged === true) {
         mess = "Pull request was merged into develop branch. Starting development pipeline";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
+        var main_repo_name = snsMessage.repository.name;
+        var sender_login = snsMessage.sender.login;
+        //var organization = snsMessage.organization.login;
+        console.log(pr_repo_full_name.substring(0, pr_repo_full_name.indexOf("/")));
+        this.lambda.invokeByRequest(beamLineARN, null, {
+            "GIT_HUB_REPO_URL": pr_repo_full_name,
+            "PROJECT_NAME": main_repo_name,
+            "userId": sender_login,
+            "organization": "GaurangBhatt",
+            "pipeline": "development"
+        });
 
-      } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'master' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
+      } else if (pull_request.base.repo.fork === false && (pull_request.head.ref === 'develop' || pull_request.head.ref.startsWith("pr-")) && pull_request.base.ref === 'master' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
         mess = "A new pull request was created for merge into master branch. Please review and merge!!!";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
 
-      } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'master' && pull_request.merged === false && snsMessage.action === 'closed') {
+      } else if (pull_request.base.repo.fork === false && (pull_request.head.ref === 'develop' || pull_request.head.ref.startsWith("pr-")) && pull_request.base.ref === 'master' && pull_request.merged === false && snsMessage.action === 'closed') {
         mess = "Pull request was closed on master branch.";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
 
-      } else if (pull_request.base.repo.fork === false && pull_request.head.ref === 'develop' && pull_request.base.ref === 'master' && pull_request.merged === true) {
+      } else if (pull_request.base.repo.fork === false && (pull_request.head.ref === 'develop' || pull_request.head.ref.startsWith("pr-")) && pull_request.base.ref === 'master' && pull_request.merged === true) {
         mess = "Pull request was merged into master branch. Starting staging (QA) pipeline";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": pr_slackSubject, "Message": mess});
+        var staging_repo_name = snsMessage.repository.name;
+        var st_sender_login = snsMessage.sender.login;
+        //var organization = snsMessage.organization.login;
+        console.log(pr_repo_full_name.substring(0, pr_repo_full_name.indexOf("/")));
+        this.lambda.invokeByRequest(beamLineARN, null, {
+            "GIT_HUB_REPO_URL": pr_repo_full_name,
+            "PROJECT_NAME": staging_repo_name,
+            "userId": st_sender_login,
+            "organization": "GaurangBhatt",
+            "pipeline": "staging"
+        });
 
       } else {
         sub = "Pipeline Error";

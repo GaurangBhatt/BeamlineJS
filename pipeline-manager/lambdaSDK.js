@@ -32,5 +32,4 @@ LambdaSDK.prototype.invokeByRequest = function(functionName, qualifier, payload)
         });
     });
 };
-
 module.exports = LambdaSDK;

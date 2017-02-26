@@ -1,15 +1,16 @@
 /*jshint esversion: 6 */
 
-// add stage for creating new branch and PR -- DEV/QA
 // move everything to yaml configuration - validate yaml config file
 // make it work on github.com & private github as well
 // add ${LATEST} and CURR_STABLE version test result assertions
+// zip file should contain all files/folders from the repo and not just index.js and node_modules
 // add stage add security scan -- use  appsec or retire.js
 // add stage add Artemis integration
 // send artifacts to slack channel (won't work with webhook, need to use token)
 
 // DONE -
 // add stage for creating new branch and PR -- FORK
+// add stage for creating new branch and PR -- DEV/QA
 // add stage function code SHA verification
 // add ${LATEST} and CURR_STABLE test stages
 // take care of multi-region deployment
@@ -139,21 +140,46 @@ exports.handler = function (event, context) {
   //set this so that npm modules are cached in writeable directory. The default HOME directory /home/xxxxx is read-only
   // file system.
   process.env['HOME']='/tmp';
-  process.env['GIT_HUB_REPO_URL'] = "https://6d87c432776b67825c4b4b7d8e6c2021e649aeb0@github.com" + "/" + event.GIT_HUB_REPO_URL + ".git";
+  process.env['GIT_TOKEN'] = '235dc5a67ad01697d0b41323c58824b6c9f4dd9c';
+  process.env['GIT_HUB_REPO_URL'] = "https://" + process.env.GIT_TOKEN + "@github.com/" + event.GIT_HUB_REPO_URL + ".git";
   process.env['PROJECT_NAME'] = event.PROJECT_NAME;
   process.env['USER_ID'] = event.userId;
   process.env['REQUEST_ID'] = context.awsRequestId;
-  process.env['GIT_TOKEN'] = '6d87c432776b67825c4b4b7d8e6c2021e649aeb0';
+  process.env['PIPELINE'] = event.pipeline;
   process.env['ORG'] = event.organization;
-
-  console.log(process.env);
+  process.env['REPO_PULL_URL'] = "https://api.github.com/repos/GaurangBhatt/sample-lambda/pulls"
 
   const invokedFunctionARN = context.invokedFunctionArn;
   const arnItems = invokedFunctionARN.split(":");
   const region = arnItems[3];
   const accountID = arnItems[4];
   const slackARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:slack-notify";
-  const toBeDeployedFunctionARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:" + event.PROJECT_NAME + "-" + event.userId;
+  var toBeDeployedFunctionARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:" + event.PROJECT_NAME;
+  console.log("Pipeline:" + event.pipeline);
+  if (event.pipeline === 'fork') {
+    toBeDeployedFunctionARN = toBeDeployedFunctionARN + "-" + event.userId;
+    process.env['S3_KEY_LOC'] = "RELEASE/FORK/";
+    process.env['ZIP_FILE_NAME'] = event.PROJECT_NAME + "-" + event.userId + ".zip";
+    process.env['REPO_PR_BASE'] = "develop";
+    process.env['REPO_CHECKOUT_BRANCH'] = "develop";
+
+  } else if (event.pipeline === 'development') {
+    toBeDeployedFunctionARN = toBeDeployedFunctionARN + "-DEV"
+    process.env['S3_KEY_LOC'] = "RELEASE/DEV/";
+    process.env['ZIP_FILE_NAME'] = event.PROJECT_NAME + "-DEV.zip";
+    process.env['REPO_PR_BASE'] = "master";
+    process.env['REPO_CHECKOUT_BRANCH'] = "develop";
+
+  } else if (event.pipeline === 'staging') {
+    toBeDeployedFunctionARN = toBeDeployedFunctionARN + "-STAGE"
+    process.env['S3_KEY_LOC'] = "RELEASE/STAGE/";
+    process.env['ZIP_FILE_NAME'] = event.PROJECT_NAME + "-STAGE.zip";
+    process.env['REPO_CHECKOUT_BRANCH'] = "master";
+
+  } else if (event.pipeline === 'production') {
+    process.env['S3_KEY_LOC'] = "RELEASE/PROD/";
+    process.env['ZIP_FILE_NAME'] = event.PROJECT_NAME + ".zip";
+  }
   const bucketName = "beamline-bucket-" + region;
   process.env['BUCKET_NAME'] = bucketName;
   this.lambda = new LambdaSDK();
@@ -162,7 +188,7 @@ exports.handler = function (event, context) {
   // need to keep this Transient.
   execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
 
-  var slackSub = "Beamline update:" + event.PROJECT_NAME + " <"+ logUrl(context.logGroupName, context.logStreamName, new Date()) + "|" + context.awsRequestId + ">";
+  var slackSub = event.pipeline + " Beamline update:" + event.PROJECT_NAME + " <"+ logUrl(context.logGroupName, context.logStreamName, new Date()) + "|" + context.awsRequestId + ">";
   var slackMessage = "Git URL: " + event.GIT_HUB_REPO_URL;
   slackMessage += "\nLambda Log Stream: <" + logUrl(context.logGroupName, context.logStreamName, new Date()) + "|Link to Stream>";
   this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
@@ -182,6 +208,8 @@ exports.handler = function (event, context) {
     mkdir -p ${exports.BUILD_DIR}
     cd ${exports.BUILD_DIR}/
     git clone ${process.env.GIT_HUB_REPO_URL}
+    cd ${process.env.PROJECT_NAME}/
+    git checkout ${process.env.REPO_CHECKOUT_BRANCH}
   `, {stdio:[0,1,2]});
   slackMessage += "\nStage: Cloning of repository completed";
 
@@ -237,7 +265,7 @@ exports.handler = function (event, context) {
         this.lambda = new LambdaSDK();
         execSync(`
           cd ${exports.BUILD_DIR}/
-          node ${__dirname}/s3Uploader.js --bucket_name ${process.env.BUCKET_NAME} --abs_file_path ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}.zip --fileName RELEASE/FORK/${process.env.PROJECT_NAME}-${process.env.USER_ID}.zip
+          node ${__dirname}/s3Uploader.js --bucket_name ${process.env.BUCKET_NAME} --abs_file_path ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}.zip --fileName ${process.env.S3_KEY_LOC}${process.env.ZIP_FILE_NAME}
         `, {stdio:[0,1,2]});
         slackMessage += "\nStage: Deployment package created and uploaded to S3 bucket ";
         this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
@@ -245,8 +273,9 @@ exports.handler = function (event, context) {
         .then(function (functionData) {
             console.log("updating function code and configuration");
             this.lambda.updateLambdaCode(
-              functionData.functionName, bucketName,
-              "RELEASE/FORK/" + process.env.PROJECT_NAME + "-"+ process.env.USER_ID + ".zip"
+              functionData.functionName,
+              bucketName,
+              process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME
             )
             .then(function() {
               this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
@@ -278,27 +307,36 @@ exports.handler = function (event, context) {
                             // test the function with CURR_STABLE alias
                             testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
                               if (aliasResult.StatusCode === 200) {
-                                execSync(`
-                                  cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
-                                  git checkout -qf -b pr-${process.env.REQUEST_ID}
-                                  git config user.name ${process.env.USER_ID}
-                                  git config push.default matching
-                                  git push origin pr-${process.env.REQUEST_ID}
+                                if (event.pipeline === 'staging') {
+                                  slackMessage = "Stage: Lambda function code & configuration released for production deployment";
+                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
 
-                                  curl -v -b -X POST \
-                                    -H "Content-Type: application/json" \
-                                    -H "Authorization: token ${process.env.GIT_TOKEN}" \
-                                    -d '{
-                                      "title":"Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
-                                      "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into Develop",
-                                      "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
-                                      "base":"develop"
-                                    }' \
-                                    "https://api.github.com/repos/GaurangBhatt/sample-lambda/pulls"
-                                `, {stdio:[0,1,2]});
-                                // add more stages
+                                  slackMessage = "Stage: Change order created & released for production deployment";
+                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+
+                                } else {
+                                  execSync(`
+                                    cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+                                    git checkout -qf -b pr-${process.env.REQUEST_ID}
+                                    git config user.name ${process.env.USER_ID}
+                                    git config push.default matching
+                                    git push origin pr-${process.env.REQUEST_ID}
+
+                                    curl -v -b -X POST \
+                                      -H "Content-Type: application/json" \
+                                      -H "Authorization: token ${process.env.GIT_TOKEN}" \
+                                      -d '{
+                                        "title": "Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
+                                        "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into '"${process.env.REPO_PR_BASE}"'",
+                                        "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
+                                        "base": "${process.env.REPO_PR_BASE}"
+                                      }' \
+                                      "${process.env.REPO_PULL_URL}"
+                                  `, {stdio:[0,1,2]});
+                                }
                                 console.log("all stages completed.");
                                 execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+
                               } else {
                                 slackMessage = "Stage: Testing of lambda function has failed using CURR_STABLE version";
                                 this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
@@ -333,9 +371,9 @@ exports.handler = function (event, context) {
           if (err.code === 'ResourceNotFoundException' && err.statusCode === 404) {
               console.log("Creating lambda function");
               this.lambda.createLambda(
-                  process.env.PROJECT_NAME + "-" + event.userId,
+                  toBeDeployedFunctionARN,
                   bucketName,
-                  "RELEASE/FORK/" + process.env.PROJECT_NAME + "-"+ process.env.USER_ID + ".zip",
+                  process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME,
                   "index.handler",
                   "arn:aws:iam::686218048045:role/lambda_role",
                   128,
@@ -358,26 +396,34 @@ exports.handler = function (event, context) {
                             // test the function with CURR_STABLE alias
                             testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
                               if (aliasResult.StatusCode === 200) {
-                                execSync(`
-                                  cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
-                                  export ORG=${process.env.ORG}
-                                  git checkout -qf -b pr-${process.env.REQUEST_ID}
-                                  git config user.name ${process.env.USER_ID}
-                                  git config push.default matching
-                                  git push origin pr-${process.env.REQUEST_ID} &> /dev/null
+                                if (event.pipeline === 'staging') {
+                                  slackMessage = "Stage: Lambda function code & configuration released for production deployment";
+                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
 
-                                  curl -v -b -X POST \
-                                    -H "Content-Type: application/json" \
-                                    -H "Authorization: token ${process.env.GIT_TOKEN}" \
-                                    -d '{
-                                      "title":"Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
-                                      "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into Develop",
-                                      "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
-                                      "base": "develop"
-                                    }' \
-                                    "https://api.github.com/repos/GaurangBhatt/sample-lambda/pulls"
-                                `, {stdio:[0,1,2]});
-                                // add more stages
+                                  slackMessage = "Stage: Change order created & released for production deployment";
+                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+
+                                } else {
+                                  execSync(`
+                                    cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+                                    export ORG=${process.env.ORG}
+                                    git checkout -qf -b pr-${process.env.REQUEST_ID}
+                                    git config user.name ${process.env.USER_ID}
+                                    git config push.default matching
+                                    git push origin pr-${process.env.REQUEST_ID} &> /dev/null
+
+                                    curl -v -b -X POST \
+                                      -H "Content-Type: application/json" \
+                                      -H "Authorization: token ${process.env.GIT_TOKEN}" \
+                                      -d '{
+                                        "title":"Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
+                                        "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into '"${process.env.REPO_PR_BASE}"'",
+                                        "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
+                                        "base": "${process.env.REPO_PR_BASE}"
+                                      }' \
+                                      "${process.env.REPO_PULL_URL}"
+                                  `, {stdio:[0,1,2]});
+                                }
                                 console.log("all stages completed.");
                                 execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
                               } else {
