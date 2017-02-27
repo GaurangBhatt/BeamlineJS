@@ -64,7 +64,7 @@ var publishVersion = function(lambda, functionName, slackARN, slackSub, callback
   // publish the latest version
   this.lambda.publishVersion(functionName, function (version) {
     console.log("published version: " + version);
-    slackMessage = "Stage: Publish new version of lambda function completed";
+    slackMessage = "Stage: Publish new version of lambda function completed: " + functionName;
     this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
     callback(version);
   });
@@ -140,7 +140,7 @@ exports.handler = function (event, context) {
   //set this so that npm modules are cached in writeable directory. The default HOME directory /home/xxxxx is read-only
   // file system.
   process.env['HOME']='/tmp';
-  process.env['GIT_TOKEN'] = '235dc5a67ad01697d0b41323c58824b6c9f4dd9c';
+  process.env['GIT_TOKEN'] = '42dd2b4a6d47c4abf5749549cf844e7659475cea';
   process.env['GIT_HUB_REPO_URL'] = "https://" + process.env.GIT_TOKEN + "@github.com/" + event.GIT_HUB_REPO_URL + ".git";
   process.env['PROJECT_NAME'] = event.PROJECT_NAME;
   process.env['USER_ID'] = event.userId;
@@ -175,9 +175,11 @@ exports.handler = function (event, context) {
     process.env['S3_KEY_LOC'] = "RELEASE/STAGE/";
     process.env['ZIP_FILE_NAME'] = event.PROJECT_NAME + "-STAGE.zip";
     process.env['REPO_CHECKOUT_BRANCH'] = "master";
+    process.env['S3_PROD_KEY_LOC'] = "RELEASE/PROD/";
+    process.env['PROD_ZIP_FILE_NAME'] = event.PROJECT_NAME + ".zip";
 
   } else if (event.pipeline === 'production') {
-    process.env['S3_KEY_LOC'] = "RELEASE/PROD/";
+    process.env['S3_KEY_LOC'] = "RELEASE/PROD/" + event.version + "/";
     process.env['ZIP_FILE_NAME'] = event.PROJECT_NAME + ".zip";
   }
   const bucketName = "beamline-bucket-" + region;
@@ -193,281 +195,437 @@ exports.handler = function (event, context) {
   slackMessage += "\nLambda Log Stream: <" + logUrl(context.logGroupName, context.logStreamName, new Date()) + "|Link to Stream>";
   this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
 
-  //setup environment stage
-  execSync(`
-    if ! [ -d ${exports.HOME_DIR} ]; then
-      mkdir -p ${exports.HOME_DIR}
-      cp -r ${__dirname}/. ${exports.HOME_DIR}
-      tar -C ${exports.HOME_DIR} -xf ${__dirname}/node_modules/lambda-git/git-2.4.3.tar
-    fi
-  `, {stdio:[0,1,2]});
-  var slackMessage = "Stage: Build environment setup completed";
+  if (event.pipeline !== 'production') {
+    //setup environment stage
+    execSync(`
+      if ! [ -d ${exports.HOME_DIR} ]; then
+        mkdir -p ${exports.HOME_DIR}
+        cp -r ${__dirname}/. ${exports.HOME_DIR}
+        tar -C ${exports.HOME_DIR} -xf ${__dirname}/node_modules/lambda-git/git-2.4.3.tar
+      fi
+    `, {stdio:[0,1,2]});
+    var slackMessage = "Stage: Build environment setup completed";
 
-  // clone stage
-  execSync(`
-    mkdir -p ${exports.BUILD_DIR}
-    cd ${exports.BUILD_DIR}/
-    git clone ${process.env.GIT_HUB_REPO_URL}
-    cd ${process.env.PROJECT_NAME}/
-    git checkout ${process.env.REPO_CHECKOUT_BRANCH}
-  `, {stdio:[0,1,2]});
-  slackMessage += "\nStage: Cloning of repository completed";
+    // clone stage
+    execSync(`
+      mkdir -p ${exports.BUILD_DIR}
+      cd ${exports.BUILD_DIR}/
+      git clone ${process.env.GIT_HUB_REPO_URL}
+      cd ${process.env.PROJECT_NAME}/
+      git checkout ${process.env.REPO_CHECKOUT_BRANCH}
+    `, {stdio:[0,1,2]});
+    slackMessage += "\nStage: Cloning of repository completed";
 
-  // install dependencies stage
-  execSync(`
-    cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
-    npm install
-  `, {stdio:[0,1,2]});
-  slackMessage += "\nStage: Install NPM modules completed";
+    // install dependencies stage
+    execSync(`
+      cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+      npm install
+    `, {stdio:[0,1,2]});
+    slackMessage += "\nStage: Install NPM modules completed";
 
-  // check code quality stage
-  execSync(`
-    cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
-    npm run quality
-  `, {stdio:[0,1,2]});
-  slackMessage += "\nStage: Run code quality checks completed";
+    // check code quality stage
+    execSync(`
+      cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+      npm run quality
+    `, {stdio:[0,1,2]});
+    slackMessage += "\nStage: Run code quality checks completed";
 
-  // run code coverage & test cases
-  execSync(`
-    cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
-    npm run cover
-    npm run check_coverage
-  `, {stdio:[0,1,2]});
-  slackMessage += "\nStage: Run unit tests and code coverage checks completed";
+    // run code coverage & test cases
+    execSync(`
+      cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+      npm run cover
+      npm run check_coverage
+    `, {stdio:[0,1,2]});
+    slackMessage += "\nStage: Run unit tests and code coverage checks completed";
 
-  var zipFile = exports.BUILD_DIR + "/" + process.env.PROJECT_NAME + ".zip";
-  var output = fs.createWriteStream(zipFile);
-  var archive = archiver('zip', {
-      zlib: { level: 9 } // Sets the compression level.
-  });
+    var zipFile = exports.BUILD_DIR + "/" + process.env.PROJECT_NAME + ".zip";
+    var output = fs.createWriteStream(zipFile);
+    var archive = archiver('zip', {
+        zlib: { level: 9 } // Sets the compression level.
+    });
 
-  /**
-  * Need to learn how to clean up this below code....nested hell :-(
-  * Below code will
-  * a) create a lambda function if it does not exists OR
-  * b) update function code and configuration if it already exists
-  * c) perform smoke testing after delployment on ${LATEST} version
-  * d) if test is successful then publish new version
-  * e) Set CURR_STABLE & LAST_STABLE alias to new version if this is first version of the function
-  *    else set CURR_STABLE to new version and LAST_STABLE to previous CURR_STABLE version.
-  */
-  // listen for all archive data to be written
-  output.on('close', function() {
-    console.log(archive.pointer() + ' total bytes');
-    console.log('archiver has been finalized and the output file descriptor has closed.');
-    var shasum = crypto.createHash('sha256');
-    fs.createReadStream(zipFile)
-    .on("data", function (chunk) {
-        shasum.update(chunk);
-    })
-    .on("end", function () {
-        var codeSHA256 = shasum.digest('base64');
-        this.lambda = new LambdaSDK();
-        execSync(`
-          cd ${exports.BUILD_DIR}/
-          node ${__dirname}/s3Uploader.js --bucket_name ${process.env.BUCKET_NAME} --abs_file_path ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}.zip --fileName ${process.env.S3_KEY_LOC}${process.env.ZIP_FILE_NAME}
-        `, {stdio:[0,1,2]});
-        slackMessage += "\nStage: Deployment package created and uploaded to S3 bucket ";
-        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-        this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
-        .then(function (functionData) {
-            console.log("updating function code and configuration");
-            this.lambda.updateLambdaCode(
-              functionData.functionName,
-              bucketName,
-              process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME
-            )
-            .then(function() {
-              this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
-              .then(function (functionData) {
-                console.log("lamb:" + functionData.sha256);
-                console.log("new:" + codeSHA256);
-                if (functionData.sha256 === codeSHA256) {
-                  slackMessage = "Stage: Lambda function code is updated";
-                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                  // update function configuration
-                  this.lambda.updateLambdaConfiguration(
-                    functionData.functionName,
-                    "index.handler",
-                    "arn:aws:iam::686218048045:role/lambda_role",
-                    "Sample function",
-                    128,
-                    30
-                  )
-                  .then(function (data) {
-                    slackMessage = "Stage: Lambda function configuration is updated";
-                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                    // test deployed function & configuration
-                    testFunction(this.lambda, toBeDeployedFunctionARN, null, slackARN, slackSub, {}, function(result) {
-                      console.log(result);
-                      if (result.StatusCode === 200) {
-                        // publish new Version
-                        publishVersion(this.lambda, toBeDeployedFunctionARN, slackARN, slackSub, function(version) {
-                          manageAliases(this.lambda, toBeDeployedFunctionARN, version, slackARN, slackSub, function(aliasData) {
-                            // test the function with CURR_STABLE alias
-                            testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
-                              if (aliasResult.StatusCode === 200) {
-                                if (event.pipeline === 'staging') {
-                                  slackMessage = "Stage: Lambda function code & configuration released for production deployment";
-                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-
-                                  slackMessage = "Stage: Change order created & released for production deployment";
-                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-
-                                } else {
-                                  execSync(`
-                                    cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
-                                    git checkout -qf -b pr-${process.env.REQUEST_ID}
-                                    git config user.name ${process.env.USER_ID}
-                                    git config push.default matching
-                                    git push origin pr-${process.env.REQUEST_ID}
-
-                                    curl -v -b -X POST \
-                                      -H "Content-Type: application/json" \
-                                      -H "Authorization: token ${process.env.GIT_TOKEN}" \
-                                      -d '{
-                                        "title": "Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
-                                        "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into '"${process.env.REPO_PR_BASE}"'",
-                                        "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
-                                        "base": "${process.env.REPO_PR_BASE}"
-                                      }' \
-                                      "${process.env.REPO_PULL_URL}"
-                                  `, {stdio:[0,1,2]});
-                                }
-                                console.log("all stages completed.");
-                                execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
-
-                              } else {
-                                slackMessage = "Stage: Testing of lambda function has failed using CURR_STABLE version";
-                                this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                                context.fail("Stage: Testing of lambda function has failed");
-                              }
-                            });
-                          });
-                        });
-                      } else {
-                        slackMessage = "Stage: Testing of lambda function has failed using ${LATEST} version";
-                        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                        context.fail("Stage: Testing of lambda function has failed");
-                      }
-                    });
-                  })
-                  .catch(function (error) {
-                    console.log("ERROR: " + error);
-                    slackMessage = "Stage: Update lambda function configuration has failed";
-                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                    context.fail("Stage: Update lambda function configuration has failed");
-                  });
-                } else {
-                  slackMessage = "Stage: Lambda function code update has failed. SHA256 mismatch between stored code and uploaded code.";
-                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                  context.fail("Stage: Lambda function code update has failed. SHA256 mismatch between stored code and uploaded code.");
-                }
-              });
-            });
-        })
-        .catch(function (err) {
-          console.log("ERROR: ", err.message);
-          if (err.code === 'ResourceNotFoundException' && err.statusCode === 404) {
-              console.log("Creating lambda function");
-              this.lambda.createLambda(
-                  toBeDeployedFunctionARN,
-                  bucketName,
-                  process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME,
-                  "index.handler",
-                  "arn:aws:iam::686218048045:role/lambda_role",
-                  128,
-                  30,
-                  "Sample function"
+    /**
+    * Need to learn how to clean up this below code....nested hell :-(
+    * Below code will
+    * a) create a lambda function if it does not exists OR
+    * b) update function code and configuration if it already exists
+    * c) perform smoke testing after delployment on ${LATEST} version
+    * d) if test is successful then publish new version
+    * e) Set CURR_STABLE & LAST_STABLE alias to new version if this is first version of the function
+    *    else set CURR_STABLE to new version and LAST_STABLE to previous CURR_STABLE version.
+    */
+    // listen for all archive data to be written
+    output.on('close', function() {
+      console.log(archive.pointer() + ' total bytes');
+      console.log('archiver has been finalized and the output file descriptor has closed.');
+      var shasum = crypto.createHash('sha256');
+      fs.createReadStream(zipFile)
+      .on("data", function (chunk) {
+          shasum.update(chunk);
+      })
+      .on("end", function () {
+          var codeSHA256 = shasum.digest('base64');
+          this.lambda = new LambdaSDK();
+          execSync(`
+            cd ${exports.BUILD_DIR}/
+            node ${__dirname}/s3Uploader.js --bucket_name ${process.env.BUCKET_NAME} --abs_file_path ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}.zip --fileName ${process.env.S3_KEY_LOC}${process.env.ZIP_FILE_NAME}
+          `, {stdio:[0,1,2]});
+          slackMessage += "\nStage: Deployment package created and uploaded to S3 bucket ";
+          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+          this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
+          .then(function (functionData) {
+              console.log("updating function code and configuration");
+              this.lambda.updateLambdaCode(
+                functionData.functionName,
+                bucketName,
+                process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME
               )
-              .then(function(){
+              .then(function() {
                 this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
-                .then(function(functionData){
+                .then(function (functionData) {
                   console.log("lamb:" + functionData.sha256);
                   console.log("new:" + codeSHA256);
                   if (functionData.sha256 === codeSHA256) {
-                    slackMessage = "Stage: Lambda function code & configuration is deployed";
+                    slackMessage = "Stage: Lambda function code is updated";
                     this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                    testFunction(this.lambda, toBeDeployedFunctionARN, null, slackARN, slackSub, {}, function(result) {
-                      if (result.StatusCode === 200) {
-                        // publish new Version
-                        publishVersion(this.lambda, toBeDeployedFunctionARN, slackARN, slackSub, function(version) {
-                          manageAliases(this.lambda, toBeDeployedFunctionARN, version, slackARN, slackSub, function(aliasData) {
-                            // test the function with CURR_STABLE alias
-                            testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
-                              if (aliasResult.StatusCode === 200) {
-                                if (event.pipeline === 'staging') {
-                                  slackMessage = "Stage: Lambda function code & configuration released for production deployment";
-                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                    // update function configuration
+                    this.lambda.updateLambdaConfiguration(
+                      functionData.functionName,
+                      "index.handler",
+                      "arn:aws:iam::686218048045:role/lambda_role",
+                      "Sample function",
+                      128,
+                      30
+                    )
+                    .then(function (data) {
+                      slackMessage = "Stage: Lambda function configuration is updated";
+                      this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                      // test deployed function & configuration
+                      testFunction(this.lambda, toBeDeployedFunctionARN, null, slackARN, slackSub, {}, function(result) {
+                        console.log(result);
+                        if (result.StatusCode === 200) {
+                          // publish new Version
+                          publishVersion(this.lambda, toBeDeployedFunctionARN, slackARN, slackSub, function(version) {
+                            manageAliases(this.lambda, toBeDeployedFunctionARN, version, slackARN, slackSub, function(aliasData) {
+                              // test the function with CURR_STABLE alias
+                              testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
+                                if (aliasResult.StatusCode === 200) {
+                                  if (event.pipeline === 'production') {
+                                    console.log("all stages completed.");
+                                    execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
 
-                                  slackMessage = "Stage: Change order created & released for production deployment";
-                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                                  } else if (event.pipeline === 'staging') {
+                                    execSync(`
+                                      cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+                                      export version=\`node -p 'require(\"./package.json\").version'\`
+                                      echo $version
+                                      node ${__dirname}/s3Uploader.js --bucket_name ${process.env.BUCKET_NAME} --abs_file_path ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}.zip --fileName ${process.env.S3_PROD_KEY_LOC}$version/${process.env.PROD_ZIP_FILE_NAME}
+                                    `, {stdio:[0,1,2]});
+                                    slackMessage = "Stage: Lambda function code & configuration released for production deployment";
+                                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+
+                                    slackMessage = "Stage: Change order created & released for production deployment";
+                                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+
+                                    console.log("all stages completed.");
+                                    execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+
+                                  } else {
+                                    execSync(`
+                                      cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+                                      git checkout -qf -b pr-${process.env.REQUEST_ID}
+                                      git config user.name ${process.env.USER_ID}
+                                      git config push.default matching
+                                      git push origin pr-${process.env.REQUEST_ID}
+
+                                      curl -v -b -X POST \
+                                        -H "Content-Type: application/json" \
+                                        -H "Authorization: token ${process.env.GIT_TOKEN}" \
+                                        -d '{
+                                          "title": "Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
+                                          "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into '"${process.env.REPO_PR_BASE}"'",
+                                          "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
+                                          "base": "${process.env.REPO_PR_BASE}"
+                                        }' \
+                                        "${process.env.REPO_PULL_URL}"
+                                    `, {stdio:[0,1,2]});
+                                    console.log("all stages completed.");
+                                    execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+                                  }
 
                                 } else {
-                                  execSync(`
-                                    cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
-                                    export ORG=${process.env.ORG}
-                                    git checkout -qf -b pr-${process.env.REQUEST_ID}
-                                    git config user.name ${process.env.USER_ID}
-                                    git config push.default matching
-                                    git push origin pr-${process.env.REQUEST_ID} &> /dev/null
-
-                                    curl -v -b -X POST \
-                                      -H "Content-Type: application/json" \
-                                      -H "Authorization: token ${process.env.GIT_TOKEN}" \
-                                      -d '{
-                                        "title":"Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
-                                        "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into '"${process.env.REPO_PR_BASE}"'",
-                                        "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
-                                        "base": "${process.env.REPO_PR_BASE}"
-                                      }' \
-                                      "${process.env.REPO_PULL_URL}"
-                                  `, {stdio:[0,1,2]});
+                                  slackMessage = "Stage: Testing of lambda function has failed using CURR_STABLE version";
+                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                                  context.fail("Stage: Testing of lambda function has failed");
                                 }
-                                console.log("all stages completed.");
-                                execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
-                              } else {
-                                slackMessage = "Stage: Testing of lambda function has failed using CURR_STABLE version";
-                                this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                                context.fail("Stage: Testing of lambda function has failed");
-                              }
+                              });
                             });
                           });
-                        });
-                      } else {
-                        slackMessage = "Stage: Testing of lambda function has failed using ${LATEST} version";
-                        this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                        context.fail("Stage: Testing of lambda function has failed");
-                      }
+                        } else {
+                          slackMessage = "Stage: Testing of lambda function has failed using ${LATEST} version";
+                          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                          context.fail("Stage: Testing of lambda function has failed");
+                        }
+                      });
+                    })
+                    .catch(function (error) {
+                      console.log("ERROR: " + error);
+                      slackMessage = "Stage: Update lambda function configuration has failed";
+                      this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                      context.fail("Stage: Update lambda function configuration has failed");
                     });
                   } else {
-                    slackMessage = "Stage: Create lambda function code & configuration has failed";
+                    slackMessage = "Stage: Lambda function code update has failed. SHA256 mismatch between stored code and uploaded code.";
                     this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
-                    context.fail("Stage: Create lambda function code & configuration has failed");
+                    context.fail("Stage: Lambda function code update has failed. SHA256 mismatch between stored code and uploaded code.");
                   }
                 });
               });
-            }
-        });
+          })
+          .catch(function (err) {
+            console.log("ERROR: ", err.message);
+            if (err.code === 'ResourceNotFoundException' && err.statusCode === 404) {
+                console.log("Creating lambda function");
+                this.lambda.createLambda(
+                    toBeDeployedFunctionARN,
+                    bucketName,
+                    process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME,
+                    "index.handler",
+                    "arn:aws:iam::686218048045:role/lambda_role",
+                    128,
+                    30,
+                    "Sample function"
+                )
+                .then(function(){
+                  this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
+                  .then(function(functionData){
+                    console.log("lamb:" + functionData.sha256);
+                    console.log("new:" + codeSHA256);
+                    if (functionData.sha256 === codeSHA256) {
+                      slackMessage = "Stage: Lambda function code & configuration is deployed";
+                      this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                      testFunction(this.lambda, toBeDeployedFunctionARN, null, slackARN, slackSub, {}, function(result) {
+                        if (result.StatusCode === 200) {
+                          // publish new Version
+                          publishVersion(this.lambda, toBeDeployedFunctionARN, slackARN, slackSub, function(version) {
+                            manageAliases(this.lambda, toBeDeployedFunctionARN, version, slackARN, slackSub, function(aliasData) {
+                              // test the function with CURR_STABLE alias
+                              testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
+                                if (aliasResult.StatusCode === 200) {
+                                  if (event.pipeline === 'production') {
+                                    console.log("all stages completed.");
+                                    execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+
+                                  } else if (event.pipeline === 'staging') {
+                                    execSync(`
+                                      cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+                                      export version=\`node -p 'require(\"./package.json\").version'\`
+                                      echo $version
+                                      node ${__dirname}/s3Uploader.js --bucket_name ${process.env.BUCKET_NAME} --abs_file_path ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}.zip --fileName ${process.env.S3_PROD_KEY_LOC}$version/${process.env.PROD_ZIP_FILE_NAME}
+                                    `, {stdio:[0,1,2]});
+                                    slackMessage = "Stage: Lambda function code & configuration released for production deployment";
+                                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+
+                                    slackMessage = "Stage: Change order created & released for production deployment";
+                                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+
+                                    console.log("all stages completed.");
+                                    execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+
+                                  } else {
+                                    execSync(`
+                                      cd ${exports.BUILD_DIR}/${process.env.PROJECT_NAME}/
+                                      git checkout -qf -b pr-${process.env.REQUEST_ID}
+                                      git config user.name ${process.env.USER_ID}
+                                      git config push.default matching
+                                      git push origin pr-${process.env.REQUEST_ID}
+
+                                      curl -v -b -X POST \
+                                        -H "Content-Type: application/json" \
+                                        -H "Authorization: token ${process.env.GIT_TOKEN}" \
+                                        -d '{
+                                          "title": "Pull submitted by beamlineJS for RequestID:'"${process.env.REQUEST_ID}"'",
+                                          "body": "This Pull Request has passed all beamlineJS stages and is ready for Merge into '"${process.env.REPO_PR_BASE}"'",
+                                          "head": "'"${process.env.ORG}"':pr-'"${process.env.REQUEST_ID}"'",
+                                          "base": "${process.env.REPO_PR_BASE}"
+                                        }' \
+                                        "${process.env.REPO_PULL_URL}"
+                                    `, {stdio:[0,1,2]});
+                                    console.log("all stages completed.");
+                                    execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+                                  }
+
+                                } else {
+                                  slackMessage = "Stage: Testing of lambda function has failed using CURR_STABLE version";
+                                  this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                                  context.fail("Stage: Testing of lambda function has failed");
+                                }
+                              });
+                            });
+                          });
+                        } else {
+                          slackMessage = "Stage: Testing of lambda function has failed using ${LATEST} version";
+                          this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                          context.fail("Stage: Testing of lambda function has failed");
+                        }
+                      });
+                    } else {
+                      slackMessage = "Stage: Create lambda function code & configuration has failed";
+                      this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                      context.fail("Stage: Create lambda function code & configuration has failed");
+                    }
+                  });
+                });
+              }
+          });
+      });
     });
-  });
 
-  // good practice to catch this error explicitly
-  archive.on('error', function(err) {
-    console.log(err);
-  });
+    // good practice to catch this error explicitly
+    archive.on('error', function(err) {
+      console.log(err);
+    });
 
-  // pipe archive data to the file
-  archive.pipe(output);
+    // pipe archive data to the file
+    archive.pipe(output);
 
-  // append a index.js from stream
-  var index_file = exports.BUILD_DIR + "/" + process.env.PROJECT_NAME + '/' + 'index.js';
-  archive.append(fs.createReadStream(index_file), { name: 'index.js' });
+    // append a index.js from stream
+    var index_file = exports.BUILD_DIR + "/" + process.env.PROJECT_NAME + '/' + 'index.js';
+    archive.append(fs.createReadStream(index_file), { name: 'index.js' });
 
-  // append node_modules
-  var module_dir = exports.BUILD_DIR + "/" + process.env.PROJECT_NAME + "/" + "node_modules";
-  archive.directory(module_dir,'node_modules');
+    // append node_modules
+    var module_dir = exports.BUILD_DIR + "/" + process.env.PROJECT_NAME + "/" + "node_modules";
+    archive.directory(module_dir,'node_modules');
 
-  // finalize the archive (ie we are done appending files but streams have to finish yet)
-  archive.finalize();
+    // finalize the archive (ie we are done appending files but streams have to finish yet)
+    archive.finalize();
+  } else {
+    this.lambda = new LambdaSDK();
+    this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
+    .then(function (functionData) {
+        console.log("updating function code and configuration");
+        this.lambda.updateLambdaCode(
+          functionData.functionName,
+          bucketName,
+          process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME
+        )
+        .then(function() {
+          this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
+          .then(function (functionData) {
+            console.log("lamb:" + functionData.sha256);
+            console.log("new:" + event.codeSHA256);
+            if (functionData.sha256 === event.codeSHA256) {
+              slackMessage = "Production Stage: Lambda function code is updated";
+              this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+              // update function configuration
+              this.lambda.updateLambdaConfiguration(
+                functionData.functionName,
+                "index.handler",
+                "arn:aws:iam::686218048045:role/lambda_role",
+                "Sample function",
+                128,
+                30
+              )
+              .then(function (data) {
+                slackMessage = "Production Stage: Lambda function configuration is updated";
+                this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                // test deployed function & configuration
+                testFunction(this.lambda, toBeDeployedFunctionARN, null, slackARN, slackSub, {}, function(result) {
+                  console.log(result);
+                  if (result.StatusCode === 200) {
+                    // publish new Version
+                    publishVersion(this.lambda, toBeDeployedFunctionARN, slackARN, slackSub, function(version) {
+                      manageAliases(this.lambda, toBeDeployedFunctionARN, version, slackARN, slackSub, function(aliasData) {
+                        // test the function with CURR_STABLE alias
+                        testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
+                          if (aliasResult.StatusCode === 200) {
+                              console.log("all production stages completed.");
+                              execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+
+                          } else {
+                            slackMessage = "Production Stage: Testing of lambda function has failed using CURR_STABLE version";
+                            this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                            context.fail("Production Stage: Testing of lambda function has failed");
+                          }
+                        });
+                      });
+                    });
+                  } else {
+                    slackMessage = "Production Stage: Testing of lambda function has failed using ${LATEST} version";
+                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                    context.fail("Production Stage: Testing of lambda function has failed");
+                  }
+                });
+              })
+              .catch(function (error) {
+                console.log("ERROR: " + error);
+                slackMessage = "Production Stage: Update lambda function configuration has failed";
+                this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                context.fail("Production Stage: Update lambda function configuration has failed");
+              });
+            } else {
+              slackMessage = "Production Stage: Lambda function code update has failed. SHA256 mismatch between stored code and uploaded code.";
+              this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+              context.fail("Production Stage: Lambda function code update has failed. SHA256 mismatch between stored code and uploaded code.");
+            }
+          });
+        });
+    })
+    .catch(function (err) {
+      console.log("ERROR: ", err.message);
+      if (err.code === 'ResourceNotFoundException' && err.statusCode === 404) {
+          console.log("Creating lambda function");
+          this.lambda.createLambda(
+              toBeDeployedFunctionARN,
+              bucketName,
+              process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME,
+              "index.handler",
+              "arn:aws:iam::686218048045:role/lambda_role",
+              128,
+              30,
+              "Sample function"
+          )
+          .then(function(){
+            this.lambda.getFunctionInfo(toBeDeployedFunctionARN)
+            .then(function(functionData){
+              console.log("lamb:" + functionData.sha256);
+              console.log("new:" + event.codeSHA256);
+              if (functionData.sha256 === event.codeSHA256) {
+                slackMessage = "Production Stage: Lambda function code & configuration is deployed";
+                this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                testFunction(this.lambda, toBeDeployedFunctionARN, null, slackARN, slackSub, {}, function(result) {
+                  if (result.StatusCode === 200) {
+                    // publish new Version
+                    publishVersion(this.lambda, toBeDeployedFunctionARN, slackARN, slackSub, function(version) {
+                      manageAliases(this.lambda, toBeDeployedFunctionARN, version, slackARN, slackSub, function(aliasData) {
+                        // test the function with CURR_STABLE alias
+                        testFunction(this.lambda, toBeDeployedFunctionARN, 'CURR_STABLE', slackARN, slackSub, {}, function(aliasResult) {
+                          if (aliasResult.StatusCode === 200) {
+                              console.log("all production stages completed.");
+                              execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+
+                          } else {
+                            slackMessage = "Production Stage: Testing of lambda function has failed using CURR_STABLE version";
+                            this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                            context.fail("Production Stage: Testing of lambda function has failed");
+                          }
+                        });
+                      });
+                    });
+                  } else {
+                    slackMessage = "Production Stage: Testing of lambda function has failed using ${LATEST} version";
+                    this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                    context.fail("Production Stage: Testing of lambda function has failed");
+                  }
+                });
+              } else {
+                slackMessage = "Production Stage: Create lambda function code & configuration has failed";
+                this.lambda.invokeByRequest(slackARN, null, {"Subject": slackSub, "Message": slackMessage});
+                context.fail("Production Stage: Create lambda function code & configuration has failed");
+              }
+            });
+          });
+        }
+    });
+  }
 };
