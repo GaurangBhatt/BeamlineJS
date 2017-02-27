@@ -1,5 +1,6 @@
 /*jshint esversion: 6 */
 
+// take care of multi-region deployment
 // move everything to yaml configuration - validate yaml config file
 // make it work on github.com & private github as well
 // add ${LATEST} and CURR_STABLE version test result assertions
@@ -13,7 +14,6 @@
 // add stage for creating new branch and PR -- DEV/QA
 // add stage function code SHA verification
 // add ${LATEST} and CURR_STABLE test stages
-// take care of multi-region deployment
 
 const path = require('path');
 const execSync = require('child_process').execSync;
