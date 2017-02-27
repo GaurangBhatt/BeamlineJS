@@ -140,7 +140,7 @@ exports.handler = function (event, context) {
   //set this so that npm modules are cached in writeable directory. The default HOME directory /home/xxxxx is read-only
   // file system.
   process.env['HOME']='/tmp';
-  process.env['GIT_TOKEN'] = '42dd2b4a6d47c4abf5749549cf844e7659475cea';
+  process.env['GIT_TOKEN'] = 'bef636ec82e08c9d1e8c22a23dd4cc75142e1591';
   process.env['GIT_HUB_REPO_URL'] = "https://" + process.env.GIT_TOKEN + "@github.com/" + event.GIT_HUB_REPO_URL + ".git";
   process.env['PROJECT_NAME'] = event.PROJECT_NAME;
   process.env['USER_ID'] = event.userId;
