@@ -12,20 +12,21 @@
     "v": "node -p 'require(\"./package.json\").version'",
     "cover": "istanbul cover node_modules/.bin/_mocha -- -- test/*.js",
     "build": "npm run cleanup && npm install",
-    "quality" : "jshint --reporter=node_modules/jshint-html-reporter/reporter.js *.js > jshint-report.html",
+    "quality": "jshint --reporter=node_modules/jshint-html-reporter/reporter.js *.js > jshint-report.html",
     "package": "rm -f pipeline-manager*.zip && zip -qyr pipeline-manager-$npm_package_version.zip . -x@.lambdaignore",
     "all": "npm run build && npm run quality && npm run cover && npm run package"
   },
-  "dependencies": {
+  "dependencies": {    
+    "js-yaml": "^3.8.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.1.2",
-    "jshint" : "latest",
+    "jshint": "latest",
     "mocha-junit-reporter": "^1.13.0",
-    "jshint-html-reporter":"latest",
-    "aws-sdk":"latest"
+    "jshint-html-reporter": "latest",
+    "aws-sdk": "latest"
   },
   "repository": {
     "type": "git",

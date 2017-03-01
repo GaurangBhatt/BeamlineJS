@@ -1,12 +1,11 @@
 var https = require('https');
 var util = require('util');
-
 exports.handler = function(event, context) {
     var postData = {
-        "channel": "#serverless-delivery",
-        "username": "pipeline-bot",
+        "channel": event.slackChannel,
+        "username": event.slackUser,
         "text": "*" + event.Subject + "*",
-        "icon_emoji": ":ghost:"
+        "icon_emoji": ":" + event.emoji + ":"
     };
     var message = event.Message;
     var severity = "good";
@@ -19,14 +18,12 @@ exports.handler = function(event, context) {
     var warningMessages = [
         "is currently running"
     ];
-
     for(var dangerMessagesItem in dangerMessages) {
         if (message.indexOf(dangerMessages[dangerMessagesItem]) != -1) {
             severity = "danger";
             break;
         }
     }
-
     // Only check for warning messages if necessary
     if (severity == "good") {
         for(var warningMessagesItem in warningMessages) {
@@ -36,21 +33,19 @@ exports.handler = function(event, context) {
             }
         }
     }
-
     postData.attachments = [
       {
           "color": severity,
           "text": message
       }
     ];
-
+    var webhook = "/services/" + event.webhookURI;
     var options = {
         method: 'POST',
         hostname: 'hooks.slack.com',
         port: 443,
-        path: '/services/T45NDKME3/B454PF3LM/eVMdzfOIGKy1b4LQQuyTYkmP'
+        path: webhook
     };
-
     var req = https.request(options, function(res) {
       res.setEncoding('utf8');
       res.on('data', function (chunk) {
@@ -58,12 +53,10 @@ exports.handler = function(event, context) {
         context.succeed();
       });
     });
-
     req.on('error', function(e) {
       console.log('problem with request: ' + e.message);
       context.fail();
     });
-
     req.write(util.format("%j", postData));
     req.end();
 };
