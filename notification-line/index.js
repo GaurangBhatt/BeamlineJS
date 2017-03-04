@@ -16,7 +16,8 @@ exports.handler = function(event, context) {
         "has failed"
     ];
     var warningMessages = [
-        "is currently running"
+        "is currently running",
+        "is not enabled"
     ];
     for(var dangerMessagesItem in dangerMessages) {
         if (message.indexOf(dangerMessages[dangerMessagesItem]) != -1) {

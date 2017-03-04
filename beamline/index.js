@@ -1,19 +1,21 @@
 /*jshint esversion: 6 */
 
-// take care of multi-region deployment
-// move everything to yaml configuration - validate yaml config file
-// make it work on github.com & private github as well
-// add ${LATEST} and CURR_STABLE version test result assertions
-// zip file should contain all files/folders from the repo and not just index.js and node_modules
-// add stage add security scan -- use  appsec or retire.js
-// add stage add Artemis integration
-// send artifacts to slack channel (won't work with webhook, need to use token)
+// TO BE DONE:
+  // take care of automatic multi-region deployment & testing
+  // make it work on github.com & enterprise/corporate github as well
+  // add ${LATEST} and CURR_STABLE version test with smoke test events
+  // add environment variables and VPC configuration support on to be deployed lambda function
+  // zip file should contain all files/folders from the repo and not just index.js and node_modules
+  // add stage add security scan -- use of retire.js
+  // add stage add CMDB tool integration
+  // send artifacts to slack channel (won't work with webhook, need to use token)
 
 // DONE -
-// add stage for creating new branch and PR -- FORK
-// add stage for creating new branch and PR -- DEV/QA
-// add stage function code SHA verification
-// add ${LATEST} and CURR_STABLE test stages
+  // move everything to yaml configuration - validate yaml config file
+  // add stage for creating new branch and PR -- FORK
+  // add stage for creating new branch and PR -- DEV/QA
+  // add stage function code SHA verification
+  // add ${LATEST} and CURR_STABLE test stages
 
 const path = require('path');
 const execSync = require('child_process').execSync;
@@ -227,11 +229,28 @@ var manageAliases = function(lambda, functionName, version, slackARN, slackSub, 
   });
 };
 
+var decrypt = function(text) {
+  var decipher = crypto.createDecipher('aes-256-cbc','beamline')
+  var dec = decipher.update(text,'hex','utf8')
+  dec += decipher.final('utf8');
+  return dec;
+}
+
 exports.handler = function (event, context) {
   //set this so that npm modules are cached in writeable directory. The default HOME directory /home/xxxxx is read-only
   // file system.
   process.env['HOME']='/tmp';
-  https.get("https://raw.githubusercontent.com/mybhishi/sample-lambda/develop/config/beamline.yaml")
+  // blow away the /tmp directory.
+  execSync('find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +', {stdio:[0,1,2]});
+
+  var configURL = (process.env.GITHUB_RAW_URL !== undefined) ? process.env.GITHUB_RAW_URL:"https://raw.githubusercontent.com/";
+  if (event.pipeline === 'production') {
+    configURL = configURL + event.GIT_HUB_REPO_URL + "/master/config/beamline.yaml";
+  } else {
+    configURL = configURL + event.GIT_HUB_REPO_URL + "/develop/config/beamline.yaml";
+  }
+  console.log(configURL);
+  https.get(configURL)
   .on('response', function (response) {
     var body = '';
     var i = 0;
@@ -250,14 +269,14 @@ exports.handler = function (event, context) {
         const stagingConfig = config[0].beamline[3].staging;
         const prodConfig = config[0].beamline[4].production;
 
-        process.env['GIT_TOKEN'] = 'bef636ec82e08c9d1e8c22a23dd4cc75142e1591';
-        process.env['GIT_HUB_REPO_URL'] = "https://" + process.env.GIT_TOKEN + "@github.com/" + event.GIT_HUB_REPO_URL + ".git";
+        process.env['GIT_TOKEN'] = decrypt(defaultConfig[1].repository.git_token);
+        process.env['GIT_HUB_REPO_URL'] = "https://" + process.env.GIT_TOKEN + "@" + process.env.GIT_HOST + "/" + event.GIT_HUB_REPO_URL + ".git";
         process.env['PROJECT_NAME'] = event.PROJECT_NAME;
         process.env['USER_ID'] = event.userId;
         process.env['REQUEST_ID'] = context.awsRequestId;
         process.env['PIPELINE'] = event.pipeline;
         process.env['ORG'] = event.organization;
-        process.env['REPO_PULL_URL'] = "https://api.github.com/repos/GaurangBhatt/sample-lambda/pulls"
+        process.env['REPO_PULL_URL'] = defaultConfig[1].repository.pull_url;
 
         const invokedFunctionARN = context.invokedFunctionArn;
         const arnItems = invokedFunctionARN.split(":");
@@ -311,6 +330,7 @@ exports.handler = function (event, context) {
         const bucketName = "beamline-bucket-" + region;
         process.env['BUCKET_NAME'] = bucketName;
         const lambda = new LambdaSDK();
+
         console.log(process.env);
 
         // blow away the /tmp directory for before and after execution of this lambda function.

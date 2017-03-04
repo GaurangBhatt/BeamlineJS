@@ -32,7 +32,15 @@ exports.handler = function(event, context) {
       const snsEvent = event.Records[0].Sns;
       const eventType = ((snsEvent.MessageAttributes || {})['X-Github-Event'] || {}).Value;
       const snsMessage = JSON.parse(snsEvent.Message);
-      https.get("https://raw.githubusercontent.com/mybhishi/sample-lambda/develop/config/beamline.yaml").on('response', function (response) {
+      var configURL = (process.env.GITHUB_RAW_URL !== undefined) ? process.env.GITHUB_RAW_URL:"https://raw.githubusercontent.com/";
+      var cOrg = (snsMessage.repository.organization !== undefined) ? snsMessage.repository.organization:snsMessage.repository.full_name.substring(0, snsMessage.repository.full_name.indexOf("/"));
+      if (eventType === 'push') {
+        configURL = configURL + cOrg + "/" + snsMessage.repository.name + "/"+ snsMessage.repository.default_branch + "/config/beamline.yaml";
+      } else if (eventType === 'pull_request') {
+        configURL = configURL + cOrg + "/" + snsMessage.repository.name + "/" + snsMessage.repository.default_branch + "/config/beamline.yaml";
+      }
+      console.log("Config URL:" + configURL);
+      https.get(configURL).on('response', function (response) {
         var body = '';
         var i = 0;
         response.on('data', function (chunk) {
@@ -124,16 +132,29 @@ exports.handler = function(event, context) {
                       "emoji": forkConfig[1].slack.icon_emoji,
                       "webhookURI": forkConfig[1].slack.webhook_uri
                     });
-                  var repo_name = snsMessage.repository.name;
-                  var sender = snsMessage.sender.login;
-                  var organization = snsMessage.organization.login;
-                  lambda.invokeByRequest(beamLineARN, null, {
-                      "GIT_HUB_REPO_URL": repo_full_name,
-                      "PROJECT_NAME": repo_name,
-                      "userId": sender,
-                      "organization": organization,
-                      "pipeline": "fork"
-                  });
+                  if (forkConfig[0].enabled === true) {
+                    var repo_name = snsMessage.repository.name;
+                    var sender = snsMessage.sender.login;
+                    var organization = snsMessage.organization.login;
+                    lambda.invokeByRequest(beamLineARN, null, {
+                        "GIT_HUB_REPO_URL": repo_full_name,
+                        "PROJECT_NAME": repo_name,
+                        "userId": sender,
+                        "organization": organization,
+                        "pipeline": "fork"
+                    });
+                  } else {
+                    console.log("Fork line is not enabled!!");
+                    lambda.invokeByRequest(slackARN, null,
+                      {
+                        "Subject": slackSub,
+                        "Message": "Fork line is not enabled!!",
+                        "slackChannel": forkConfig[1].slack.channel_name,
+                        "slackUser": forkConfig[1].slack.slack_user,
+                        "emoji": forkConfig[1].slack.icon_emoji,
+                        "webhookURI": forkConfig[1].slack.webhook_uri
+                      });
+                  }
                 } else if (snsMessage.repository.fork === false && snsMessage.ref === 'refs/heads/develop') {
                     lambda.invokeByRequest(slackARN, null,
                       {
@@ -174,7 +195,6 @@ exports.handler = function(event, context) {
               var pr_url = pull_request.html_url;
               var pr_username = pull_request.user.login;
               var pr_slackSubject = "[" + pr_repo_full_name + "]:";
-
               if (pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
                 pr_slackSubject += " New PR opened by " + pr_username + " URL <" + pr_url + "|Link to pull request>";
               } if (pull_request.merged === false && snsMessage.action === 'closed') {
@@ -219,16 +239,29 @@ exports.handler = function(event, context) {
                     "emoji": devConfig[1].slack.icon_emoji,
                     "webhookURI": devConfig[1].slack.webhook_uri
                   });
-                var main_repo_name = snsMessage.repository.name;
-                var sender_login = snsMessage.sender.login;
-                console.log(pr_repo_full_name.substring(0, pr_repo_full_name.indexOf("/")));
-                lambda.invokeByRequest(beamLineARN, null, {
-                    "GIT_HUB_REPO_URL": pr_repo_full_name,
-                    "PROJECT_NAME": main_repo_name,
-                    "userId": sender_login,
-                    "organization": "GaurangBhatt",
-                    "pipeline": "development"
-                });
+                if (devConfig[0].enabled === true) {
+                  var main_repo_name = snsMessage.repository.name;
+                  var sender_login = snsMessage.sender.login;
+                  var org = pr_repo_full_name.substring(0, pr_repo_full_name.indexOf("/"));
+
+                  lambda.invokeByRequest(beamLineARN, null, {
+                      "GIT_HUB_REPO_URL": pr_repo_full_name,
+                      "PROJECT_NAME": main_repo_name,
+                      "userId": sender_login,
+                      "organization": org,
+                      "pipeline": "development"
+                  });
+                } else {
+                  lambda.invokeByRequest(slackARN, null,
+                    {
+                      "Subject": "Pipeline warning",
+                      "Message": "Development line is not enabled!!",
+                      "slackChannel": devConfig[1].slack.channel_name,
+                      "slackUser": devConfig[1].slack.slack_user,
+                      "emoji": devConfig[1].slack.icon_emoji,
+                      "webhookURI": devConfig[1].slack.webhook_uri
+                    });
+                }
 
               } else if (pull_request.base.repo.fork === false && (pull_request.head.ref === 'develop' || pull_request.head.ref.startsWith("pr-")) && pull_request.base.ref === 'master' && pull_request.merged === false && (snsMessage.action === 'opened' || snsMessage.action === 'reopened')) {
                 mess = "A new pull request was created for merge into master branch. Please review and merge!!!";
@@ -265,18 +298,28 @@ exports.handler = function(event, context) {
                     "emoji": stagingConfig[1].slack.icon_emoji,
                     "webhookURI": stagingConfig[1].slack.webhook_uri
                   });
-                var staging_repo_name = snsMessage.repository.name;
-                var st_sender_login = snsMessage.sender.login;
-                //var organization = snsMessage.organization.login;
-                console.log(pr_repo_full_name.substring(0, pr_repo_full_name.indexOf("/")));
-                lambda.invokeByRequest(beamLineARN, null, {
-                    "GIT_HUB_REPO_URL": pr_repo_full_name,
-                    "PROJECT_NAME": staging_repo_name,
-                    "userId": st_sender_login,
-                    "organization": "GaurangBhatt",
-                    "pipeline": "staging"
-                });
-
+                if (stagingConfig[0].enabled === true) {
+                  var staging_repo_name = snsMessage.repository.name;
+                  var st_sender_login = snsMessage.sender.login;
+                  var st_org = pr_repo_full_name.substring(0, pr_repo_full_name.indexOf("/"));
+                  lambda.invokeByRequest(beamLineARN, null, {
+                      "GIT_HUB_REPO_URL": pr_repo_full_name,
+                      "PROJECT_NAME": staging_repo_name,
+                      "userId": st_sender_login,
+                      "organization": st_org,
+                      "pipeline": "staging"
+                  });
+                } else {
+                  lambda.invokeByRequest(slackARN, null,
+                    {
+                      "Subject": "Pipeline warning",
+                      "Message": "Staging line is not enabled!!",
+                      "slackChannel": stagingConfig[1].slack.channel_name,
+                      "slackUser": stagingConfig[1].slack.slack_user,
+                      "emoji": stagingConfig[1].slack.icon_emoji,
+                      "webhookURI": stagingConfig[1].slack.webhook_uri
+                    });
+                }
               } else {
                 sub = "Pipeline Error";
                 mess = "Pipeline request was received but with errors. Pipeline only accepts changes from pull requests on develop and master branch";
