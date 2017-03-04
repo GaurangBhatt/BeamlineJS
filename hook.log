@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<HTML>
+<HEAD>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<TITLE>Alert: Network Error</TITLE>
+<STYLE type="text/css">
+ body {
+ 	  background-color: rgb(224,224,224);
+ 	  font-family: Verdana, Arial, Helvetica, sans-serif;
+ 	  font-size: 100%;
+ }
+ .mainbox {
+    border: 1px solid;
+    border-color: rgb(0,58,111);
+    background: rgb(255,255,255);
+    width: 600px;
+    max-width: 600px;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    margin-left: auto;
+    margin-right: auto;
+ }
+ .exceptionbox {
+ 	  border: 2px solid;
+ 	  border-color: rgb(148,0,41);
+ 	  background-color: rgb(223,231,237);
+ 	  width: 450px;
+ 	  max-width: 540px;
+ 	  padding: 5px;
+    margin-left: auto;
+    margin-right: auto;
+ }
+ .noticetable {
+          width: 90%;
+    max-width: 90%;
+ 	  padding: 5px;
+    margin-left: auto;
+    margin-right: auto;
+ 	}
+ .noticebox {
+ 	  border-top: 1px dashed;
+ 	  border-color: rgb(0,58,111);
+ 	  width: 90%;
+ 	  max-width: 90%;
+ 	  padding: 5px;
+ 	  padding-bottom: 15px;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.8em;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ 	}
+ .colornoticebox {
+ 	  border-top: 1px dashed;
+ 	  border-color: rgb(0,58,111);
+ 	  background-color: rgb(223,231,237);
+ 	  width: 90%;
+ 	  max-width: 90%;
+ 	  padding: 5px;
+ 	  padding-bottom: 15px;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.8em;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ 	}
+ .debugbox {
+ 	  border: 1px dashed;
+ 	  border-color: rgb(192,192,192);
+    background: rgb(224,224,224);
+    width: 600px;
+    max-width: 600px;
+    padding: 0 1em 0.5em 1em;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.7em;
+    color: rgb(192,192,192);
+    margin-left: auto;
+    margin-right: auto;
+ }
+ .blueheader {
+ 	  background-color: rgb(0,58,111);
+    text-align: center;
+    vertical-align: middle;
+    height: 65px;
+    color:	rgb(255,255,255);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+ 	  font-size: 1.25em;
+    font-weight: bold;
+ }
+ .mainbody {
+ 	  padding-top: 15px;
+ }
+ .redfooter {
+ 	  background-color: rgb(148,0,41);
+    text-align: center;
+    vertical-align: middle;
+    height: 40px;
+    color:	rgb(255,255,255);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+ 	  font-size: 1.25em;
+    font-weight: bold;
+ }
+ h2 {
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ }
+ h3 {
+ 	  font-family: "Arial Black", Arial, Verdana, Helvetica, sans-serif;
+    font-weight: bold;
+    line-height: 50%;
+    color: rgb(148,0,41);
+ }
+ .normaltext {
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.8em;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ }
+ .exceptionlftcol {
+ 	  text-align: right;
+ 	  vertical-align: top;
+ 	  background-color: rgb(223,231,237);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.7em;
+    text-decoration: none;
+    color: rgb(0,58,111);
+ 	  font-weight: bold;
+ 	  line-height: 15px;
+ }
+ .exceptionrtcol {
+    width: 250px;
+    max-width: 420px;
+ 	  text-align: left;
+ 	  background-color: rgb(223,231,237);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.7em;
+    text-decoration: none;
+    color: rgb(0,58,111);
+ 	  line-height: 15px;
+ }
+ .debugleftcol {
+ 	  text-align: right;
+ 	  vertical-align: top;
+ 	  background-color: rgb(224,224,224);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    font-weight: bold;
+    text-decoration: none;
+    color: rgb(176,176,176);
+ }
+ .debugrightcol {
+ 	  width: 400px;
+ 	  max-width: 480px;
+ 	  text-align: left;
+ 	  background-color: rgb(224,224,224);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    text-decoration: none;
+    color: rgb(176,176,176);
+ }
+</STYLE>
+</HEAD>
+<BODY>
+<TABLE class="mainbox">
+  <TR>
+    <TD class="blueheader">
+    Network Error
+    </TD>
+  </TR>
+  <TR>
+	  <TD class="mainbody">
+    <TABLE class="exceptionbox">
+      <TR>
+      	<TD class="exceptionlftcol">
+      		Exception:
+        </TD>
+        <TD class="exceptionrtcol">
+        	 dns_server_failure
+        </TD>
+      </TR>
+      <TR>
+      	<TD class="exceptionlftcol">
+      		Exception details:
+        </TD>
+        <TD class="exceptionrtcol">
+        	Your request could not be processed because an error occurred contacting the DNS server.
+        </TD>
+      </TR>
+      <TR>
+      	<TD class="exceptionlftcol">
+      		Requested URL:
+        </TD>
+        <TD class="exceptionrtcol">
+        	http://post/
+        </TD>
+      </TR>
+    </TABLE>
+    </TD>
+  </TR>
+  <TR>
+  	<TD>
+    <TABLE class="noticetable">
+      <TR>
+      	<TD>
+      	<H2>So sorry for the inconvenience, but your request was unable to be processed at this time.</H2>
+        </TD>
+      </TR>
+    	<TR>
+      	<TD class="colornoticebox">
+      	<H3>What you can do:</H3>
+      	The DNS server may be temporarily unavailable, or there could be a network problem.<BR />
+      	You do not have access to the requested URL at this time. To check if Capital One TechOps or ISRM is aware of an existing global issue, please visit the <A HREF="https://webaccess2.kdc.capitalone.com/GetAccess/Saml/IDP/SSO/Unsolicitied?TARGET=https://portal.ito.unisys.com/group/capitalone/alerts-and-outages">Alerts & Outages website</A> or the <A HREF="https://pulse.kdc.capitalone.com/community/resources/technology-resources">Tech Help Pulse page</A> for alerts, or <A HREF="https://webaccess2.kdc.capitalone.com/GetAccess/Saml/IDP/SSO/Unsolicited?TARGET=https://portal.ito.unisys.com/group/capitalone/chat-support">begin a Live Chat</A> with a Technology Help Desk agent.
+        </TD>
+      </TR>
+      <TR>
+      	<TD class="noticebox">
+      	<H3>Please remember:</H3>
+        Accessing the Internet and using Capital One equipment with care, per the <A HREF="https://knowledgelink.kdc.capitalone.com/kl/livelink.exe?func=ll&objId=1015451335&objAction=download&viewType=1">End User Responsibilities and Acceptable Use Standard</A>, helps safeguard our company and our customers. Visit <A HREF="https://pulse.kdc.capitalone.com/community/resources/technology-resources/information-security-&-risk-management">Information Security &amp; Risk Management</A> for additional resources.
+        </TD>
+      </TR>
+    </TABLE>
+    </TD>
+  </TR>
+  <TR>
+    <TD class="redfooter">
+    Capital One - C1TECH - TechOps
+    </TD>
+  </TR>
+</TABLE>
+<BR />
+<TABLE class="debugbox">
+  <TR>
+    <TD class="debugleftcol">
+    Browser:
+    </TD>
+    <TD class="debugrightcol">
+    curl/7.51.0
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+    Client-IP:
+    </TD>
+    <TD class="debugrightcol">
+    172.28.93.78
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+    Client Name:
+    </TD>
+    <TD class="debugrightcol">
+    ksz163
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+    Appliance:
+    </TD>
+    <TD class="debugrightcol">
+    kdcproxy09p (10.37.130.38)
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       URL Requested:
+    </TD>
+    <TD class="debugrightcol">
+       http://post/
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       Reverse lookup:
+    </TD>
+    <TD class="debugrightcol">
+       
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       Content Category:
+    </TD>
+    <TD class="debugrightcol">
+       none
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       Exception ID:
+    </TD>
+    <TD class="debugrightcol">
+       dns_server_failure
+    </TD>
+  </TR> 
+</TABLE>
+</BODY>
+</HTML>{
+  "type": "Repository",
+  "id": 12445230,
+  "name": "amazonsns",
+  "active": true,
+  "events": [
+    "push",
+    "pull_request"
+  ],
+  "config": {
+    "aws_key": "AKIAJZJTYUXPKCVVYUNQ",
+    "aws_secret": "********",
+    "sns_topic": "arn:aws:sns:us-east-1:686218048045:lambci-InvokeTopic-PM42PQ3NNG61",
+    "sns_region": "us-east-1"
+  },
+  "updated_at": "2017-03-04T04:04:37Z",
+  "created_at": "2017-03-04T04:04:37Z",
+  "url": "https://api.github.com/repos/mybhishi/sample-lambda/hooks/12445230",
+  "test_url": "https://api.github.com/repos/mybhishi/sample-lambda/hooks/12445230/test",
+  "ping_url": "https://api.github.com/repos/mybhishi/sample-lambda/hooks/12445230/pings",
+  "last_response": {
+    "code": null,
+    "status": "unused",
+    "message": null
+  }
+}
+<!DOCTYPE html>
+<HTML>
+<HEAD>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<TITLE>Alert: Network Error</TITLE>
+<STYLE type="text/css">
+ body {
+ 	  background-color: rgb(224,224,224);
+ 	  font-family: Verdana, Arial, Helvetica, sans-serif;
+ 	  font-size: 100%;
+ }
+ .mainbox {
+    border: 1px solid;
+    border-color: rgb(0,58,111);
+    background: rgb(255,255,255);
+    width: 600px;
+    max-width: 600px;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    margin-left: auto;
+    margin-right: auto;
+ }
+ .exceptionbox {
+ 	  border: 2px solid;
+ 	  border-color: rgb(148,0,41);
+ 	  background-color: rgb(223,231,237);
+ 	  width: 450px;
+ 	  max-width: 540px;
+ 	  padding: 5px;
+    margin-left: auto;
+    margin-right: auto;
+ }
+ .noticetable {
+          width: 90%;
+    max-width: 90%;
+ 	  padding: 5px;
+    margin-left: auto;
+    margin-right: auto;
+ 	}
+ .noticebox {
+ 	  border-top: 1px dashed;
+ 	  border-color: rgb(0,58,111);
+ 	  width: 90%;
+ 	  max-width: 90%;
+ 	  padding: 5px;
+ 	  padding-bottom: 15px;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.8em;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ 	}
+ .colornoticebox {
+ 	  border-top: 1px dashed;
+ 	  border-color: rgb(0,58,111);
+ 	  background-color: rgb(223,231,237);
+ 	  width: 90%;
+ 	  max-width: 90%;
+ 	  padding: 5px;
+ 	  padding-bottom: 15px;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.8em;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ 	}
+ .debugbox {
+ 	  border: 1px dashed;
+ 	  border-color: rgb(192,192,192);
+    background: rgb(224,224,224);
+    width: 600px;
+    max-width: 600px;
+    padding: 0 1em 0.5em 1em;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.7em;
+    color: rgb(192,192,192);
+    margin-left: auto;
+    margin-right: auto;
+ }
+ .blueheader {
+ 	  background-color: rgb(0,58,111);
+    text-align: center;
+    vertical-align: middle;
+    height: 65px;
+    color:	rgb(255,255,255);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+ 	  font-size: 1.25em;
+    font-weight: bold;
+ }
+ .mainbody {
+ 	  padding-top: 15px;
+ }
+ .redfooter {
+ 	  background-color: rgb(148,0,41);
+    text-align: center;
+    vertical-align: middle;
+    height: 40px;
+    color:	rgb(255,255,255);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+ 	  font-size: 1.25em;
+    font-weight: bold;
+ }
+ h2 {
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ }
+ h3 {
+ 	  font-family: "Arial Black", Arial, Verdana, Helvetica, sans-serif;
+    font-weight: bold;
+    line-height: 50%;
+    color: rgb(148,0,41);
+ }
+ .normaltext {
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.8em;
+    color: rgb(0,58,111);
+    text-decoration: none;
+ }
+ .exceptionlftcol {
+ 	  text-align: right;
+ 	  vertical-align: top;
+ 	  background-color: rgb(223,231,237);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.7em;
+    text-decoration: none;
+    color: rgb(0,58,111);
+ 	  font-weight: bold;
+ 	  line-height: 15px;
+ }
+ .exceptionrtcol {
+    width: 250px;
+    max-width: 420px;
+ 	  text-align: left;
+ 	  background-color: rgb(223,231,237);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 0.7em;
+    text-decoration: none;
+    color: rgb(0,58,111);
+ 	  line-height: 15px;
+ }
+ .debugleftcol {
+ 	  text-align: right;
+ 	  vertical-align: top;
+ 	  background-color: rgb(224,224,224);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    font-weight: bold;
+    text-decoration: none;
+    color: rgb(176,176,176);
+ }
+ .debugrightcol {
+ 	  width: 400px;
+ 	  max-width: 480px;
+ 	  text-align: left;
+ 	  background-color: rgb(224,224,224);
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    text-decoration: none;
+    color: rgb(176,176,176);
+ }
+</STYLE>
+</HEAD>
+<BODY>
+<TABLE class="mainbox">
+  <TR>
+    <TD class="blueheader">
+    Network Error
+    </TD>
+  </TR>
+  <TR>
+	  <TD class="mainbody">
+    <TABLE class="exceptionbox">
+      <TR>
+      	<TD class="exceptionlftcol">
+      		Exception:
+        </TD>
+        <TD class="exceptionrtcol">
+        	 dns_server_failure
+        </TD>
+      </TR>
+      <TR>
+      	<TD class="exceptionlftcol">
+      		Exception details:
+        </TD>
+        <TD class="exceptionrtcol">
+        	Your request could not be processed because an error occurred contacting the DNS server.
+        </TD>
+      </TR>
+      <TR>
+      	<TD class="exceptionlftcol">
+      		Requested URL:
+        </TD>
+        <TD class="exceptionrtcol">
+        	http://post/
+        </TD>
+      </TR>
+    </TABLE>
+    </TD>
+  </TR>
+  <TR>
+  	<TD>
+    <TABLE class="noticetable">
+      <TR>
+      	<TD>
+      	<H2>So sorry for the inconvenience, but your request was unable to be processed at this time.</H2>
+        </TD>
+      </TR>
+    	<TR>
+      	<TD class="colornoticebox">
+      	<H3>What you can do:</H3>
+      	The DNS server may be temporarily unavailable, or there could be a network problem.<BR />
+      	You do not have access to the requested URL at this time. To check if Capital One TechOps or ISRM is aware of an existing global issue, please visit the <A HREF="https://webaccess2.kdc.capitalone.com/GetAccess/Saml/IDP/SSO/Unsolicitied?TARGET=https://portal.ito.unisys.com/group/capitalone/alerts-and-outages">Alerts & Outages website</A> or the <A HREF="https://pulse.kdc.capitalone.com/community/resources/technology-resources">Tech Help Pulse page</A> for alerts, or <A HREF="https://webaccess2.kdc.capitalone.com/GetAccess/Saml/IDP/SSO/Unsolicited?TARGET=https://portal.ito.unisys.com/group/capitalone/chat-support">begin a Live Chat</A> with a Technology Help Desk agent.
+        </TD>
+      </TR>
+      <TR>
+      	<TD class="noticebox">
+      	<H3>Please remember:</H3>
+        Accessing the Internet and using Capital One equipment with care, per the <A HREF="https://knowledgelink.kdc.capitalone.com/kl/livelink.exe?func=ll&objId=1015451335&objAction=download&viewType=1">End User Responsibilities and Acceptable Use Standard</A>, helps safeguard our company and our customers. Visit <A HREF="https://pulse.kdc.capitalone.com/community/resources/technology-resources/information-security-&-risk-management">Information Security &amp; Risk Management</A> for additional resources.
+        </TD>
+      </TR>
+    </TABLE>
+    </TD>
+  </TR>
+  <TR>
+    <TD class="redfooter">
+    Capital One - C1TECH - TechOps
+    </TD>
+  </TR>
+</TABLE>
+<BR />
+<TABLE class="debugbox">
+  <TR>
+    <TD class="debugleftcol">
+    Browser:
+    </TD>
+    <TD class="debugrightcol">
+    curl/7.51.0
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+    Client-IP:
+    </TD>
+    <TD class="debugrightcol">
+    172.28.93.78
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+    Client Name:
+    </TD>
+    <TD class="debugrightcol">
+    ksz163
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+    Appliance:
+    </TD>
+    <TD class="debugrightcol">
+    kdcproxy09p (10.37.130.38)
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       URL Requested:
+    </TD>
+    <TD class="debugrightcol">
+       http://post/
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       Reverse lookup:
+    </TD>
+    <TD class="debugrightcol">
+       
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       Content Category:
+    </TD>
+    <TD class="debugrightcol">
+       none
+    </TD>
+  </TR>
+  <TR>
+    <TD class="debugleftcol">
+       Exception ID:
+    </TD>
+    <TD class="debugrightcol">
+       dns_server_failure
+    </TD>
+  </TR> 
+</TABLE>
+</BODY>
+</HTML>{
+  "type": "Repository",
+  "id": 12445231,
+  "name": "amazonsns",
+  "active": true,
+  "events": [
+    "push",
+    "pull_request"
+  ],
+  "config": {
+    "aws_key": "AKIAJZJTYUXPKCVVYUNQ",
+    "aws_secret": "********",
+    "sns_topic": "arn:aws:sns:us-east-1:686218048045:lambci-InvokeTopic-PM42PQ3NNG61",
+    "sns_region": "us-east-1"
+  },
+  "updated_at": "2017-03-04T04:04:37Z",
+  "created_at": "2017-03-04T04:04:37Z",
+  "url": "https://api.github.com/repos/GaurangBhatt/sample-lambda/hooks/12445231",
+  "test_url": "https://api.github.com/repos/GaurangBhatt/sample-lambda/hooks/12445231/test",
+  "ping_url": "https://api.github.com/repos/GaurangBhatt/sample-lambda/hooks/12445231/pings",
+  "last_response": {
+    "code": null,
+    "status": "unused",
+    "message": null
+  }
+}

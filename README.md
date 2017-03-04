@@ -27,6 +27,9 @@ This function will perform the continuous integration and deployment of CLIENT b
   * [Generate ACCESS_KEY and SECRET_KEY of your AWS Account](http://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html)
     * This is used for integrating AWS Simple Notification Service (SNS) with GitHub repository. Unfortunately GitHub's Amazon SNS integration does not work with IAM Role.
 
+* You will need AWS CLI installed on your machine
+  * [How to install AWS CLI?](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)
+
 * You will need GitHub Account
   * [How to create GitHub Account?](https://help.github.com/articles/signing-up-for-a-new-github-account/)
   * [How to generate GitHub personal access token?](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
@@ -37,6 +40,10 @@ This function will perform the continuous integration and deployment of CLIENT b
   * [How to create Slack channels?](https://get.slack.help/hc/en-us/articles/201402297-Create-a-channel)
   * [How to create incoming Webhook on Slack channel?](https://www.programmableweb.com/news/how-to-integrate-webhooks-slack-api/how-to/2015/10/20)
     * You will need this webhook to send notifications from Beamline to your Slack channels
+
+* You will need NPM
+   * [How to install NPM on Mac?](http://blog.teamtreehouse.com/install-node-js-npm-mac)
+   * [How to install NPM on Windows?](http://blog.teamtreehouse.com/install-node-js-npm-windows)
 
 * CLIENT
   * Will have to follow [Vincent Driessen's successful branching model](http://nvie.com/posts/a-successful-git-branching-model/).
@@ -52,3 +59,15 @@ This function will perform the continuous integration and deployment of CLIENT b
     - Developers will use the GitHub console to review and merge changes into master branch
 
 ## Setup
+*I have tested these steps only on MAC. I don't see a reason why it will not work on Windows. You will need something like GitBash to run these steps on Windows*
+
+* Clone BeamlineJS repository on your local machine
+
+* Update setup.properties file
+  * AWS_ACCESS_KEY to your AWS Account's Access key
+  * AWS_SECRET_KEY to your AWS Account's Secret key
+
+* Navigate into your cloned repository's home directory and run following commands
+```
+
+```
