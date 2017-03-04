@@ -63,9 +63,10 @@ This function will perform the continuous integration and deployment of CLIENT b
 
 * Clone BeamlineJS repository on your local machine
 
-* Update setup.properties file
-  * AWS_ACCESS_KEY to your AWS Account's Access key
-  * AWS_SECRET_KEY to your AWS Account's Secret key
+* Copy setup.properties.rename file and create setup.properties file
+  * Update setup.properties file to change
+    * AWS_ACCESS_KEY to your AWS Account's Access key
+    * AWS_SECRET_KEY to your AWS Account's Secret key
 
 * Navigate into your cloned repository's home directory and run following commands
 ```
