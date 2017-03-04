@@ -8,6 +8,19 @@
 #Setup Beamline
 You can setup your own Beamline by using below simple steps. **Please note that for Beamline to work you will have to create accounts using vendor services that may result in $$ cost. Please go through the pricing model of each services offered by the vendors prior to using these services**.
 
+It will create following three AWS Lambda functions:
+
+### [Function - slack-notify](https://github.com/GaurangBhatt/BeamlineJS/blob/master/notification-line/README.md)
+This function is used for sending Slack notifications to your slack channel(s).
+
+### [Function - pipeline-manager](https://github.com/GaurangBhatt/BeamlineJS/blob/master/pipeline-manager/README.md)
+This function manages the overall execution of BeamlineJS. It parses the GitHub event and then initiates the pipeline based on the event.
+
+### [Function - beamlineJS](https://github.com/GaurangBhatt/BeamlineJS/blob/master/beamline/README.md)
+This function will perform the continuous integration and deployment of CLIENT based on the Beamline configuration provided by the CLIENT.
+
+*CLIENT- Is the AWS Lambda function which will be integrated and deployed using BeamlineJS*
+
 ## Prerequisites
 * You will need AWS Account
   * [How to create AWS Account?](http://docs.aws.amazon.com/lambda/latest/dg/getting-started.html)
@@ -24,5 +37,18 @@ You can setup your own Beamline by using below simple steps. **Please note that 
   * [How to create Slack channels?](https://get.slack.help/hc/en-us/articles/201402297-Create-a-channel)
   * [How to create incoming Webhook on Slack channel?](https://www.programmableweb.com/news/how-to-integrate-webhooks-slack-api/how-to/2015/10/20)
     * You will need this webhook to send notifications from Beamline to your Slack channels
+
+* CLIENT
+  * Will have to follow [Vincent Driessen's successful branching model](http://nvie.com/posts/a-successful-git-branching-model/).
+  In summary:
+  * Developer will
+    - Develop on fork repository's develop branch
+    - Merge from master to fork repository's develop to resolve any conflicts
+    - push commits to fork repository's develop branch
+  * BeamlineJS will enforce following flow
+    - Automatically create a new pull request to merge new PR branch of fork repository into base repository's develop branch
+    - Developers will use the GitHub console to review and merge the new pull request
+    - Automatically create a new pull request to merge new PR branch of base repository's develop branch into base repository's master branch
+    - Developers will use the GitHub console to review and merge changes into master branch
 
 ## Setup
