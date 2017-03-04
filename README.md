@@ -29,6 +29,8 @@ This function will perform the continuous integration and deployment of CLIENT b
 
 * You will need AWS CLI installed on your machine
   * [How to install AWS CLI?](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)
+  * [How to configure AWS Profile?](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html)
+    * Configure profile in all regions where you want Beamline.
 
 * You will need GitHub Account
   * [How to create GitHub Account?](https://help.github.com/articles/signing-up-for-a-new-github-account/)
@@ -62,13 +64,21 @@ This function will perform the continuous integration and deployment of CLIENT b
 *I have tested these steps only on MAC. I don't see a reason why it will not work on Windows. You will need something like GitBash to run these steps on Windows*
 
 * Clone BeamlineJS repository on your local machine
+```
+git clone https://github.com/GaurangBhatt/BeamlineJS.git
+```
+
+* Navigate into your cloned repository's home directory and run following commands
 
 * Copy setup.properties.rename file and create setup.properties file
+```
+cp setup.properties.rename setup.properties
+```
   * Update setup.properties file to change
     * AWS_ACCESS_KEY to your AWS Account's Access key
     * AWS_SECRET_KEY to your AWS Account's Secret key
 
-* Navigate into your cloned repository's home directory and run following commands
+* Install and setup BeamlineJS
 ```
 
 ```

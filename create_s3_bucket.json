@@ -1,0 +1,28 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Description" : "Create S3 bucket",
+    "Parameters" : {
+  		"BucketNameParam" : {
+  			"Description" : "Please enter bucket name",
+  			"Type" : "String",
+  			"MinLength" : "5",
+  			"MaxLength" : "50"
+  		}
+    },
+    "Resources" : {
+        "bucket" : {
+            "Type" : "AWS::S3::Bucket",
+            "Properties" : {
+                "BucketName" : {"Ref" : "BucketNameParam"}
+            }
+        }
+    },
+    "Outputs" : {
+        "BucketUrl" : {
+            "Value" : { "Fn::Join" : [
+                                      "", [ "https://", { "Fn::GetAtt" : [ "bucket", "DomainName" ] } ]
+                                      ] },
+            "Description" : "Bucket for beamline"
+        }
+    }
+}

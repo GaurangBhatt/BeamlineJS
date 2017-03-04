@@ -2,11 +2,12 @@
 # NEVER CHECK IN THIS file with actual values if you are using a public repository.
 # It contains keys that will give access to your AWS and GitHub account.
 ##
-AWS_ACCESS_KEY=
-AWS_SECRET_KEY=
+AWS_PROFILE_NAME=
+INFRASTRUCTURE_PREFIX=
 GITHUB_PERSONAL_TOKEN=
 GITHUB_RAW_URL=https://raw.githubusercontent.com/
 GIT_HOST=github.com
-PRIMARY_AWS_REGION=us-east-1
-SECONDARY_AWS_REGION=us-west-2
+S3_BUCKET_NAME=
+AWS_REGIONS=us-east-1,us-west-2
+PRIMARY_AWS_REGION=
 REPOSITORY_HOOKS_URLS=https://api.github.com/repos/mybhishi/sample-lambda/hooks,https://api.github.com/repos/GaurangBhatt/sample-lambda/hooks
