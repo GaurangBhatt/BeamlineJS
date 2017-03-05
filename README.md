@@ -41,7 +41,7 @@ This function will perform the continuous integration and deployment of CLIENT b
   * [How to create Slack Account?](https://slack.com/create#email)
   * [How to create Slack channels?](https://get.slack.help/hc/en-us/articles/201402297-Create-a-channel)
   * [How to create incoming Webhook on Slack channel?](https://www.programmableweb.com/news/how-to-integrate-webhooks-slack-api/how-to/2015/10/20)
-    * You will need this webhook to send notifications from Beamline to your Slack channels
+    * You will need webhooks to send notifications from Beamline to your Slack channels
 
 * You will need NPM
    * [How to install NPM on Mac?](http://blog.teamtreehouse.com/install-node-js-npm-mac)

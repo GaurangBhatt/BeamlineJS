@@ -1,0 +1,85 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Create IAM role to be used by Beamline functions",
+  "Parameters": {
+  	"BucketName" : {
+  		"Description" : "Please enter bucket name",
+  		"Type" : "String",
+  		"MinLength" : "5",
+  		"MaxLength" : "50"
+  	},
+    "RoleName" : {
+      "Type" : "String",
+      "Description" : "Name of IAM role used for execution by Beamline Lambda functions"
+    }
+  },
+  "Resources": {
+		"role": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": { "Ref" : "RoleName" },
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+  									{
+  										"Effect": "Allow",
+  										"Principal": {
+  											"Service": ["s3.amazonaws.com","lambda.amazonaws.com"]
+  										},
+  										"Action": [
+  											"sts:AssumeRole"
+  										]
+  									}
+  							  ]
+                },
+                "Path": "/",
+                "Policies": [
+                  {
+                    "PolicyName": "role-policy",
+                    "PolicyDocument": {
+                      "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogGroup",
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": "arn:aws:logs:*:*:*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                              "lambda:CreateAlias",
+                              "lambda:CreateFunction",
+                              "lambda:DeleteAlias",
+                              "lambda:DeleteFunction",
+                              "lambda:GetAlias",
+                              "lambda:GetFunction",
+                              "lambda:GetFunctionConfiguration",
+                              "lambda:InvokeFunction",
+                              "lambda:ListAliases",
+                              "lambda:PublishVersion",
+                              "lambda:UpdateAlias",
+                              "lambda:UpdateFunctionCode",
+                              "lambda:UpdateFunctionConfiguration"
+                            ],
+                            "Resource": "*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": "iam:PassRole",
+                            "Resource": "*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:ListBucket"],
+                            "Resource": { "Fn::Join" : ["", ["arn:aws:s3:::", {"Ref" : "BucketName"},"-*/*"]]}
+                        }
+                      ]
+                    }
+                  }
+                ]
+			      }
+        }
+    }
+}

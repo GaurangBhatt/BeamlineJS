@@ -1,0 +1,6 @@
+{
+  "Variables": {
+    "GITHUB_RAW_URL":"https://raw.githubusercontent.com/",
+    "GIT_HOST":"github.com"
+  }
+}
