@@ -9,7 +9,7 @@
 
 
 #Setup Beamline
-You can setup your own Beamline by using below simple steps. **Please note that for Beamline to work you will have to create accounts using vendor services that may result in $$ cost. Please go through the pricing model of each services offered by the vendors prior to using these services**.
+You can setup your own Beamline by following below simple steps. **Please note that for Beamline to work you will have to create accounts using vendor services that may result in $$ cost. Please go through the pricing model of each services offered by the vendors prior to using these services**.
 
 It will create following three AWS Lambda functions:
 
@@ -22,7 +22,7 @@ This function manages the overall execution of BeamlineJS. It parses the GitHub 
 ### [Function - beamlineJS](https://github.com/GaurangBhatt/BeamlineJS/blob/master/beamline/README.md)
 This function will perform the continuous integration and deployment of CLIENT based on the Beamline configuration provided by the CLIENT.
 
-*CLIENT- Is the AWS Lambda function which will be integrated and deployed using BeamlineJS*
+*CLIENT- Is the AWS Lambda function which will use BeamlineJS functions to perform its automated build, test and deployment activities.*
 
 ## Prerequisites
 * You will need AWS Account
