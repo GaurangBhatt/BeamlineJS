@@ -7,7 +7,7 @@ INFRASTRUCTURE_PREFIX=
 GITHUB_PERSONAL_TOKEN=
 S3_BUCKET_NAME=
 AWS_REGIONS=us-east-1,us-west-2
-PRIMARY_AWS_REGION=
+PRIMARY_AWS_REGION=us-east-1
 REPOSITORY_HOOKS_URLS=https://api.github.com/repos/mybhishi/sample-lambda/hooks,https://api.github.com/repos/GaurangBhatt/sample-lambda/hooks
 AWS_ACCOUNT_ID=
 
