@@ -5,6 +5,9 @@
 
 **This beamline will facilitate in accelerate the build, test, release and deployment of node.js based lambda functions quickly and efficiently across various facilities (regions).**
 
+### Features
+
+
 #Setup Beamline
 You can setup your own Beamline by using below simple steps. **Please note that for Beamline to work you will have to create accounts using vendor services that may result in $$ cost. Please go through the pricing model of each services offered by the vendors prior to using these services**.
 
@@ -70,15 +73,21 @@ git clone https://github.com/GaurangBhatt/BeamlineJS.git
 
 * Navigate into your cloned repository's home directory and run following commands
 
-* Copy setup.properties.rename file and create setup.properties file
-```
-cp setup.properties.rename setup.properties
-```
-  * Update setup.properties file to change
-    * AWS_ACCESS_KEY to your AWS Account's Access key
-    * AWS_SECRET_KEY to your AWS Account's Secret key
+  * Copy setup.properties.rename file and create setup.properties file
+    ```
+    cp setup.properties.rename setup.properties
+    ```
+    * Update setup.properties file to change
+      * AWS_PROFILE_NAME - name of your configured profile using AWS Secret key and access key
+      * INFRASTRUCTURE_PREFIX - to any string value of your choice
+      * GITHUB_PERSONAL_TOKEN - to your personal token
+      * S3_BUCKET_NAME - name of your S3 bucket
+      * AWS_REGIONS - provide comma separated list of all regions where you want to install/setup BeamlineJS
+      * PRIMARY_AWS_REGION - Set the primary region. This will integrate the SNS topic of this region to your repository via repository hooks
+      * REPOSITORY_HOOKS_URLS - comma separated list of all repository hook URLs to which you want to add Amazon SNS integration
 
-* Install and setup BeamlineJS
-```
-
-```
+  * Install and setup BeamlineJS
+    ```
+    chmod +x setup.sh
+    ./setup.sh
+    ```
