@@ -1,0 +1,38 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Stack to create SNS topic that will integrate with Git repository",
+    "Parameters": {
+      "lambdaFunctionARN": {
+          "Description": "ARN of Lambda function",
+          "Type": "String"
+      },
+      "snsTopicName": {
+          "Description": "Name of the SNS topic",
+          "Type": "String"
+      }
+    },
+    "Resources" : {
+        "topic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "TopicName": { "Ref": "snsTopicName" },
+                "Subscription": [
+                  {
+                      "Endpoint": { "Ref" : "lambdaFunctionARN" },
+                      "Protocol": "lambda"
+                  }
+                ]
+            }
+        },
+        "LambdaInvokePermission": {
+          "Type": "AWS::Lambda::Permission",
+          "Properties": {
+              "FunctionName": { "Ref" : "lambdaFunctionARN" },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "sns.amazonaws.com",
+              "SourceArn": { "Ref": "topic" }
+          },
+          "DependsOn": ["topic"]
+        }
+    }
+}

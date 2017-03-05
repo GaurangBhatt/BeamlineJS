@@ -77,7 +77,7 @@ do
   aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./notification-line/notification-line-1.0.0.zip s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}/INFRA/notification-line.zip --sse
   aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./beamline/beamline-1.0.0.zip s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}/INFRA/beamline.zip --sse
 
-  ## Create IAM role
+  ## Create IAM role if not exists
   result=`aws --profile ${AWS_PROFILE_NAME} iam get-role --role-name ${iam_role_name}`
   statusCode=$?
   if [[ ${statusCode} != 0 ]];
@@ -122,6 +122,7 @@ do
   fi;
 
   ## Create or update Beamline lambda functions & configurations
+  ### Slack notification function ###
   set +e
   rm -rf ./outputs/slack_fn_${region}.json
   aws --profile ${AWS_PROFILE_NAME} --region ${region} lambda get-function --function-name ${slack_notify_fn_name} >> ./outputs/slack_fn_${region}.json
@@ -157,6 +158,7 @@ do
     error_exit ${return_code} "Error updating slack notification lambda function..."
   fi
 
+  ### Pipeline manager function ###
   set +e
   rm -rf ./outputs/pipeline-manager_fn_${region}.json
   aws --profile ${AWS_PROFILE_NAME} --region ${region} lambda get-function --function-name ${pipeline_manager_fn_name} >> ./outputs/pipeline-manager_fn_${region}.json
@@ -193,6 +195,7 @@ do
     error_exit ${return_code} "Error updating slack notification lambda function..."
   fi
 
+  ### BeamlineJS function ###
   set +e
   rm -rf ./outputs/beamlineJS_fn_${region}.json
   aws --profile ${AWS_PROFILE_NAME} --region ${region} lambda get-function --function-name ${beamline_fn_name} >> ./outputs/beamlineJS_fn_${region}.json
@@ -237,8 +240,49 @@ do
   if [[ -z ${snsTopicARN} ]]
   then
     echo "Creating SNS Topic..."
+    aws --profile ${AWS_PROFILE_NAME} --region ${region}  cloudformation create-stack \
+        --stack-name "beamline-sns-topic-stack-${region}" \
+        --template-body file://create_sns_topic.json \
+        --parameters \
+        ParameterKey=lambdaFunctionARN,ParameterValue='arn:aws:lambda:'${region}':'${AWS_ACCOUNT_ID}':function:'${pipeline_manager_fn_name} \
+        ParameterKey=snsTopicName,ParameterValue=${sns_topic_name}
+
+    return_code=$?
+    echo "Return code:"${return_code}
+    error_exit ${return_code} "Error creating SNS topic stack..."
+    echo "Creating SNS Topic with name:"${sns_topic_name}
+    sleep 30
+    set -e
+    stack_status=`aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation describe-stacks --stack-name beamline-sns-topic-stack-${region} --max-items 1 --output text | cut -f 7`
+    if [[ -z ${stack_status} ]];
+    then
+       stack_status=CHECK_AGAIN
+    fi;
+    while [ ${stack_status} != CREATE_COMPLETE ]
+    do
+        echo ${stack_status}
+        sleep 10
+        stack_status=`aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation describe-stacks --stack-name beamline-sns-topic-stack-${region} --max-items 1 --output text | cut -f 7`
+        if [[ -z ${stack_status} ]];
+        then
+           stack_status=CHECK_AGAIN
+        fi;
+        if [ ${stack_status} == ROLLBACK_COMPLETE ]
+        then
+           exit 1
+        fi;
+    done;
+    set +e
   else
     echo "Updating SNS Topic..."
+    set -e
+    rm -rf ./outputs/subscription.json
+    aws --profile ${AWS_PROFILE_NAME} --region ${region} sns list-subscriptions-by-topic --topic-arn ${snsTopicARN} >> ./outputs/subscription.json
+    subARN=`node -p 'require("./outputs/subscription.json").Subscriptions[0].SubscriptionArn'`
+    endpointARN=`node -p 'require("./outputs/subscription.json").Subscriptions[0].Endpoint'`
+    aws --profile ${AWS_PROFILE_NAME} --region ${region} sns unsubscribe --subscription-arn ${subARN}
+    aws --profile ${AWS_PROFILE_NAME} --region ${region} sns subscribe --topic-arn ${snsTopicARN} --protocol lambda --notification-endpoint ${endpointARN}
+    set +e
   fi;
 
   ## setup SNS integration only if region is primary region
