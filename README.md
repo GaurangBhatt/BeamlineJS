@@ -3,7 +3,7 @@
   * *the line in a linear accelerator along which a beam of particles travels, or*
   * *the path leading from a cyclic accelerator to the experimental endstation (as in synchrotron light sources or cyclotrons)."*
 
-**This beamline will facilitate in accelerate the build, test, release and deployment of node.js based lambda functions quickly and efficiently across various facilities (regions).**
+**BeamlineJS will accelerate the build, test, release and deployment of node.js based lambda functions across various facilities (regions).**
 
 ### Features
 
