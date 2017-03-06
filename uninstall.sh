@@ -43,6 +43,31 @@ do
   echo "Return code:"${return_code}": deleted lambda function:"${slack_notify_fn_name}
   error_exit ${return_code} "Error while deleting.."${slack_notify_fn_name}
 
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 rm s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region} --recursive
+  return_code=$?
+  echo "Return code:"${return_code}": deleted everything from S3 bucket function:"${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+  error_exit ${return_code} "Error while deleting from S3.."${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 rb s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region} --force
+  return_code=$?
+  echo "Return code:"${return_code}": deleted S3 bucket:"${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+  error_exit ${return_code} "Error while deleting S3.."${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation delete-stack --stack-name beamline-s3-stack-${region}
+  return_code=$?
+  echo "Return code:"${return_code}": deleted stack:beamline-s3-stack-"${region}
+  error_exit ${return_code} "Error while deleting stack..beamline-s3-stack-"${region}
+
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation delete-stack --stack-name beamline-iam-role-stack
+  return_code=$?
+  echo "Return code:"${return_code}": deleted stack:beamline-iam-role-stack"
+  error_exit ${return_code} "Error while deleting stack:beamline-iam-role-stack"
+
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation delete-stack --stack-name beamline-sns-topic-stack-${region}
+  return_code=$?
+  echo "Return code:"${return_code}": deleted stack:beamline-sns-topic-stack-"${region}
+  error_exit ${return_code} "Error while deleting stack..beamline-sns-topic-stack-"${region}
+
   ## disable SNS integration only if region is primary region
   if [[ ${region} == ${PRIMARY_AWS_REGION} ]];
   then
