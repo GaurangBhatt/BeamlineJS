@@ -11,8 +11,8 @@ exports.handler = function(event, context) {
     const arnItems = invokedFunctionARN.split(":");
     const region = arnItems[3];
     const accountID = arnItems[4];
-    const slackARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:slack-notify";
-    const beamLineARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:beamlineJS";
+    const slackARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:" + process.env.FUNCTION_PREFIX + "-slack-notify";
+    const beamLineARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:" + process.env.FUNCTION_PREFIX + "-beamlineJS";
     const lambda = new LambdaSDK();
 
     // blow away the /tmp directory.

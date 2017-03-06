@@ -120,6 +120,7 @@ do
   else
     echo "IAM role already exists..."
   fi;
+  role_arn='arn:aws:iam::'${AWS_ACCOUNT_ID}':role/'${iam_role_name}
 
   ## Create or update Beamline lambda functions & configurations
   ### Slack notification function ###
@@ -132,11 +133,10 @@ do
   if [[ ${file_size} == 0 ]];
   then
     echo "Creating slack notification function..."
-    role_arn='arn:aws:iam::'${AWS_ACCOUNT_ID}':role/'${iam_role_name}
     aws --profile ${AWS_PROFILE_NAME} lambda create-function \
          --region ${region} \
          --function-name ${slack_notify_fn_name} \
-         --role  ${role_arn} \
+         --role ${role_arn} \
          --runtime nodejs4.3 \
          --handler ${NOTIFY_FN_HANDLER} \
          --description "${NOTIFY_FN_DESC}" \
@@ -156,6 +156,19 @@ do
     return_code=$?
     echo "Return code:"${return_code}
     error_exit ${return_code} "Error updating slack notification lambda function..."
+
+    echo "Updating slack notification function configurations..."
+    aws --profile ${AWS_PROFILE_NAME} lambda update-function-configuration \
+        --function-name ${slack_notify_fn_name} \
+        --role ${role_arn} \
+        --handler ${NOTIFY_FN_HANDLER} \
+        --description "${NOTIFY_FN_DESC}" \
+        --timeout ${NOTIFY_FN_TIMEOUT} \
+        --memory-size ${NOTIFY_FN_MEMORY_SIZE} 1>&2
+
+    return_code=$?
+    echo "Return code:"${return_code}
+    error_exit ${return_code} "Error updating slack notification function configurations..."
   fi
 
   ### Pipeline manager function ###
@@ -168,11 +181,10 @@ do
   if [[ ${file_size} == 0 ]];
   then
     echo "Creating pipeline manager function..."
-    role_arn='arn:aws:iam::'${AWS_ACCOUNT_ID}':role/'${iam_role_name}
     aws --profile ${AWS_PROFILE_NAME} lambda create-function \
          --region ${region} \
          --function-name ${pipeline_manager_fn_name} \
-         --role  ${role_arn} \
+         --role ${role_arn} \
          --runtime nodejs4.3 \
          --handler ${PIPELINE_MGR_FN_HANDLER} \
          --description "${PIPELINE_MGR_FN_DESC}" \
@@ -193,6 +205,19 @@ do
     return_code=$?
     echo "Return code:"${return_code}
     error_exit ${return_code} "Error updating slack notification lambda function..."
+
+    echo "Updating pipeline manager function configurations..."
+    aws --profile ${AWS_PROFILE_NAME} lambda update-function-configuration \
+        --function-name ${pipeline_manager_fn_name} \
+        --role ${role_arn} \
+        --handler ${PIPELINE_MGR_FN_HANDLER} \
+        --description "${PIPELINE_MGR_FN_DESC}" \
+        --timeout ${PIPELINE_MGR_FN_TIMEOUT} \
+        --environment file://./pipeline-manager-env-variables.json \
+        --memory-size ${PIPELINE_MGR_FN_MEMORY_SIZE} 1>&2
+    return_code=$?
+    echo "Return code:"${return_code}
+    error_exit ${return_code} "Error updating slack notification function configurations..."
   fi
 
   ### BeamlineJS function ###
@@ -205,11 +230,10 @@ do
   if [[ ${file_size} == 0 ]];
   then
     echo "Creating beamlineJS function..."
-    role_arn='arn:aws:iam::'${AWS_ACCOUNT_ID}':role/'${iam_role_name}
     aws --profile ${AWS_PROFILE_NAME} lambda create-function \
          --region ${region} \
          --function-name ${beamline_fn_name} \
-         --role  ${role_arn} \
+         --role ${role_arn} \
          --runtime nodejs4.3 \
          --handler ${BEAMLINE_FN_HANDLER} \
          --description "${BEAMLINE_FN_DESC}" \
@@ -230,6 +254,19 @@ do
     return_code=$?
     echo "Return code:"${return_code}
     error_exit ${return_code} "Error updating slack notification lambda function..."
+
+    echo "Updating beamlineJS function configurations..."
+    aws --profile ${AWS_PROFILE_NAME} lambda update-function-configuration \
+        --function-name ${beamline_fn_name} \
+        --role ${role_arn} \
+        --handler ${BEAMLINE_FN_HANDLER} \
+        --description "${BEAMLINE_FN_DESC}" \
+        --timeout ${BEAMLINE_FN_TIMEOUT} \
+        --environment file://./beamline-env-variables.json \
+        --memory-size ${BEAMLINE_FN_MEMORY_SIZE} 1>&2
+    return_code=$?
+    echo "Return code:"${return_code}
+    error_exit ${return_code} "Error updating slack notification function configurations..."
   fi
 
   ## Create or Update SNS Topic & subscription
@@ -272,6 +309,7 @@ do
            exit 1
         fi;
     done;
+    snsTopicARN=`aws --profile ${AWS_PROFILE_NAME} --region ${region} sns list-topics --output text | cut -f2 | grep ${sns_topic_name}`
     set +e
   else
     echo "Updating SNS Topic..."
@@ -302,7 +340,7 @@ do
         "config": {
           "aws_key": "'"${AWS_ACCESS_KEY}"'",
           "aws_secret": "'"${AWS_SECRET_KEY}"'",
-          "sns_topic": "arn:aws:sns:us-east-1:686218048045:lambci-InvokeTopic-PM42PQ3NNG61",
+          "sns_topic": "'"${snsTopicARN}"'",
           "sns_region": "'"${PRIMARY_AWS_REGION}"'"
         }
       }' \

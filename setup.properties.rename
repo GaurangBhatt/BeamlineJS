@@ -3,6 +3,8 @@
 # It contains keys that will give access to your AWS and GitHub account.
 ##
 AWS_PROFILE_NAME=<This will be the profile you configured using AWS configure command>
+AWS_ACCESS_KEY=<your AWS account's access key>
+AWS_SECRET_KEY=<your AWS account's secret key>
 INFRASTRUCTURE_PREFIX=<value here will be prefixed to all AWS resources>
 GITHUB_PERSONAL_TOKEN=<used for performing Git operations on your repository>
 S3_BUCKET_NAME=<Name of your S3 bucket. After setup your bucket name will be INFRASTRUCTURE_PREFIX-S3_BUCKET_NAME-AWS_REGION.

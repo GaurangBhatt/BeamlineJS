@@ -236,6 +236,25 @@ var decrypt = function(text) {
   return dec;
 }
 
+var setFunctionConfig = function(pipeline, region) {
+  if (region === 'us-east-1') {
+    process.env['BUCKET_NAME'] = pipeline[2].us_east_1[1].S3.bucket_name;
+    process.env['FN_IAM_ROLE'] = pipeline[2].us_east_1[2].function_config.iam_role_arn;
+    process.env['FN_HANDLER'] = pipeline[2].us_east_1[2].function_config.handler;
+    process.env['FN_DESC'] = pipeline[2].us_east_1[2].function_config.description;
+    process.env['MEMORY_SIZE'] = pipeline[2].us_east_1[2].function_config.memory_size;
+    process.env['TIMEOUT'] = pipeline[2].us_east_1[2].function_config.timeout;
+
+  } else if (region === 'us-west-2') {
+    process.env['BUCKET_NAME'] = pipeline[2].us_west_2[1].S3.bucket_name;
+    process.env['FN_IAM_ROLE'] = pipeline[2].us_west_2[2].function_config.iam_role_arn;
+    process.env['FN_HANDLER'] = pipeline[2].us_west_2[2].function_config.handler;
+    process.env['FN_DESC'] = pipeline[2].us_west_2[2].function_config.description;
+    process.env['MEMORY_SIZE'] = pipeline[2].us_west_2[2].function_config.memory_size;
+    process.env['TIMEOUT'] = pipeline[2].us_west_2[2].function_config.timeout;
+  }
+}
+
 exports.handler = function (event, context) {
   //set this so that npm modules are cached in writeable directory. The default HOME directory /home/xxxxx is read-only
   // file system.
@@ -282,7 +301,7 @@ exports.handler = function (event, context) {
         const arnItems = invokedFunctionARN.split(":");
         const region = arnItems[3];
         const accountID = arnItems[4];
-        const slackARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:slack-notify";
+        const slackARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:" + process.env.FUNCTION_PREFIX + "-slack-notify";
         var toBeDeployedFunctionARN = "arn:aws:lambda:" + region + ":" + accountID + ":function:" + event.PROJECT_NAME;
         console.log("Pipeline:" + event.pipeline);
         if (event.pipeline === 'fork') {
@@ -295,6 +314,7 @@ exports.handler = function (event, context) {
           process.env['slackUser'] = forkConfig[1].slack.slack_user;
           process.env['emoji'] = forkConfig[1].slack.icon_emoji;
           process.env['webhookURI'] = forkConfig[1].slack.webhook_uri;
+          setFunctionConfig(forkConfig, region);
 
         } else if (event.pipeline === 'development') {
           toBeDeployedFunctionARN = toBeDeployedFunctionARN + "-DEV"
@@ -306,6 +326,7 @@ exports.handler = function (event, context) {
           process.env['slackUser'] = devConfig[1].slack.slack_user;
           process.env['emoji'] = devConfig[1].slack.icon_emoji;
           process.env['webhookURI'] = devConfig[1].slack.webhook_uri;
+          setFunctionConfig(devConfig, region);
 
         } else if (event.pipeline === 'staging') {
           toBeDeployedFunctionARN = toBeDeployedFunctionARN + "-STAGE"
@@ -314,10 +335,11 @@ exports.handler = function (event, context) {
           process.env['REPO_CHECKOUT_BRANCH'] = "master";
           process.env['S3_PROD_KEY_LOC'] = "RELEASE/PROD/";
           process.env['PROD_ZIP_FILE_NAME'] = event.PROJECT_NAME + ".zip";
-          process.env['slackChannel'] = devConfig[1].slack.channel_name;
-          process.env['slackUser'] = devConfig[1].slack.slack_user;
-          process.env['emoji'] = devConfig[1].slack.icon_emoji;
-          process.env['webhookURI'] = devConfig[1].slack.webhook_uri;
+          process.env['slackChannel'] = stagingConfig[1].slack.channel_name;
+          process.env['slackUser'] = stagingConfig[1].slack.slack_user;
+          process.env['emoji'] = stagingConfig[1].slack.icon_emoji;
+          process.env['webhookURI'] = stagingConfig[1].slack.webhook_uri;
+          setFunctionConfig(stagingConfig, region);
 
         } else if (event.pipeline === 'production') {
           process.env['S3_KEY_LOC'] = "RELEASE/PROD/" + event.version + "/";
@@ -326,12 +348,10 @@ exports.handler = function (event, context) {
           process.env['slackUser'] = prodConfig[1].slack.slack_user;
           process.env['emoji'] = prodConfig[1].slack.icon_emoji;
           process.env['webhookURI'] = prodConfig[1].slack.webhook_uri;
-        }
-        const bucketName = "beamline-bucket-" + region;
-        process.env['BUCKET_NAME'] = bucketName;
-        const lambda = new LambdaSDK();
+          setFunctionConfig(prodConfig, region);
 
-        console.log(process.env);
+        }
+        const lambda = new LambdaSDK();
 
         // blow away the /tmp directory for before and after execution of this lambda function.
         // need to keep this Transient.
@@ -440,7 +460,7 @@ exports.handler = function (event, context) {
                     console.log("updating function code and configuration");
                     lambda.updateLambdaCode(
                       functionData.functionName,
-                      bucketName,
+                      process.env.BUCKET_NAME,
                       process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME
                     )
                     .then(function() {
@@ -462,11 +482,11 @@ exports.handler = function (event, context) {
                           // update function configuration
                           lambda.updateLambdaConfiguration(
                             functionData.functionName,
-                            "index.handler",
-                            "arn:aws:iam::686218048045:role/lambda_role",
-                            "Sample function",
-                            128,
-                            30
+                            process.env.FN_HANDLER,
+                            process.env.FN_IAM_ROLE,
+                            process.env.FN_DESC,
+                            Number(process.env.MEMORY_SIZE),
+                            Number(process.env.TIMEOUT)
                           )
                           .then(function (data) {
                             slackMessage = "Stage: Lambda function configuration is updated";
@@ -615,13 +635,13 @@ exports.handler = function (event, context) {
                       console.log("Creating lambda function");
                       lambda.createLambda(
                           toBeDeployedFunctionARN,
-                          bucketName,
+                          process.env.BUCKET_NAME,
                           process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME,
-                          "index.handler",
-                          "arn:aws:iam::686218048045:role/lambda_role",
-                          128,
-                          30,
-                          "Sample function"
+                          process.env.FN_HANDLER,
+                          process.env.FN_IAM_ROLE,
+                          Number(process.env.MEMORY_SIZE),
+                          Number(process.env.TIMEOUT),
+                          process.env.FN_DESC
                       )
                       .then(function(){
                         lambda.getFunctionInfo(toBeDeployedFunctionARN)
@@ -781,7 +801,7 @@ exports.handler = function (event, context) {
               console.log("updating function code and configuration");
               lambda.updateLambdaCode(
                 functionData.functionName,
-                bucketName,
+                process.env.BUCKET_NAME,
                 process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME
               )
               .then(function() {
@@ -803,11 +823,11 @@ exports.handler = function (event, context) {
                     // update function configuration
                     lambda.updateLambdaConfiguration(
                       functionData.functionName,
-                      "index.handler",
-                      "arn:aws:iam::686218048045:role/lambda_role",
-                      "Sample function",
-                      128,
-                      30
+                      process.env.FN_HANDLER,
+                      process.env.FN_IAM_ROLE,
+                      process.env.FN_DESC,
+                      Number(process.env.MEMORY_SIZE),
+                      Number(process.env.TIMEOUT)
                     )
                     .then(function (data) {
                       slackMessage = "Production Stage: Lambda function configuration is updated";
@@ -900,13 +920,13 @@ exports.handler = function (event, context) {
                 console.log("Creating lambda function");
                 lambda.createLambda(
                     toBeDeployedFunctionARN,
-                    bucketName,
+                    process.env.BUCKET_NAME,
                     process.env.S3_KEY_LOC + process.env.ZIP_FILE_NAME,
-                    "index.handler",
-                    "arn:aws:iam::686218048045:role/lambda_role",
-                    128,
-                    30,
-                    "Sample function"
+                    process.env.FN_HANDLER,
+                    process.env.FN_IAM_ROLE,
+                    Number(process.env.MEMORY_SIZE),
+                    Number(process.env.TIMEOUT),
+                    process.env.FN_DESC
                 )
                 .then(function(){
                   lambda.getFunctionInfo(toBeDeployedFunctionARN)
