@@ -92,6 +92,7 @@ git clone https://github.com/GaurangBhatt/BeamlineJS.git
     ./setup.sh
     ```
   * Uninstall BeamlineJS
+    
     ```
     chmod +x uninstall.sh
     ./uninstall.sh
