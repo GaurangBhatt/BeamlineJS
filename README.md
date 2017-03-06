@@ -5,7 +5,22 @@
 
 **BeamlineJS will accelerate the build, test, release and deployment of node.js based lambda functions across various facilities (regions).**
 
-### Features
+## Highlights
+* Auto-scaleable (AWS Lambda) and multi-region availability.
+* Ability to setup BeamlineJS in multiple regions.
+* Automatically create pull request to merge from fork into develop branch and from develop branch to master (read further to see the Git   branching model it uses).
+* Development and QA (staging) pipeline are started automatically when merge of PR is successful on the respective branch.
+* Manages lambda function versioning and aliases.
+* Handles rollbacks in case of failures.
+* Verifies the SHA256 of lambda function’s code and configuration.
+* Uses NodeJS frameworks to run unit, functional (QA), integration and load tests.
+* Sends slack notifications
+* function code is released in S3 bucket
+* Multi region testing at fork, development, staging (qa) and production pipelines.
+
+### Coming soon
+* BeamlineJ - CI/CD pipeline for AWS Lambda function with Java runtime
+* BeamlinePY - CI/CD pipeline for AWS Lambda function with Python runtime
 
 
 #Setup Beamline
@@ -92,14 +107,14 @@ git clone https://github.com/GaurangBhatt/BeamlineJS.git
     ./setup.sh
     ```
   * Uninstall BeamlineJS
-    
+
     ```
     chmod +x uninstall.sh
     ./uninstall.sh
     ```
   * Create Amazon SNS integration with your repository
     If you want to disable the hook then set active=false
-    
+
     ```
     curl -v -b -X POST \
     -H "Content-Type: application/json" \
