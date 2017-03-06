@@ -91,3 +91,28 @@ git clone https://github.com/GaurangBhatt/BeamlineJS.git
     chmod +x setup.sh
     ./setup.sh
     ```
+  * Uninstall BeamlineJS
+    ```
+    chmod +x uninstall.sh
+    ./uninstall.sh
+    ```
+  * Create Amazon SNS integration with your repository
+    If you want to disable the hook then set active=false
+    
+    ```
+    curl -v -b -X POST \
+    -H "Content-Type: application/json" \
+    -H "Authorization: token ${GITHUB_PERSONAL_TOKEN}" \
+    -d '{
+      "name": "amazonsns",
+      "active": true,
+      "events": ["push", "pull_request"],
+      "config": {
+        "aws_key": "'"${AWS_ACCESS_KEY}"'",
+        "aws_secret": "'"${AWS_SECRET_KEY}"'",
+        "sns_topic": "'"${snsTopicARN}"'",
+        "sns_region": "'"${PRIMARY_AWS_REGION}"'"
+      }
+    }' \
+    "${REPOSITORY_HOOK_URL}"
+    ```
