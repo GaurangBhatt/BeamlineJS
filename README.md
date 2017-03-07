@@ -28,13 +28,13 @@ You can setup your own Beamline by following below simple steps. **Please note t
 
 It will create following three AWS Lambda functions:
 
-### [Function - slack-notify](https://github.com/GaurangBhatt/BeamlineJS/blob/master/notification-line/README.md)
+### [Function - slack-notify](https://github.com/GaurangBhatt/BeamlineJS/blob/master/notification-line)
 This function is used for sending Slack notifications to your slack channel(s).
 
-### [Function - pipeline-manager](https://github.com/GaurangBhatt/BeamlineJS/blob/master/pipeline-manager/README.md)
+### [Function - pipeline-manager](https://github.com/GaurangBhatt/BeamlineJS/blob/master/pipeline-manager)
 This function manages the overall execution of BeamlineJS. It parses the GitHub event and then initiates the pipeline based on the event.
 
-### [Function - beamlineJS](https://github.com/GaurangBhatt/BeamlineJS/blob/master/beamline/README.md)
+### [Function - beamlineJS](https://github.com/GaurangBhatt/BeamlineJS/blob/master/beamline)
 This function will perform the continuous integration and deployment of CLIENT based on the Beamline configuration provided by the CLIENT.
 
 *CLIENT- Is the AWS Lambda function which will use BeamlineJS functions to perform its automated build, test and deployment activities.*
@@ -101,6 +101,9 @@ git clone https://github.com/GaurangBhatt/BeamlineJS.git
       * PRIMARY_AWS_REGION - Set the primary region. This will integrate the SNS topic of this region to your repository via repository hooks
       * REPOSITORY_HOOKS_URLS - comma separated list of all repository hook URLs to which you want to add Amazon SNS integration
 
+  * Update **beamline-env-variables.json** and **pipeline-manager-env-variables.json** file
+    * Change FUNCTION_PREFIX to INFRASTRUCTURE_PREFIX value from setup.properties
+  
   * Install and setup BeamlineJS
     ```
     chmod +x setup.sh
