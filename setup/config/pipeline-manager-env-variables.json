@@ -1,0 +1,9 @@
+{
+  "Variables": {
+    "GITHUB_RAW_URL": "https://raw.githubusercontent.com/",
+    "FUNCTION_PREFIX": "demo",
+    "GITHUB_API_URL": "https://github.com/api/v3/",
+    "GIT_TOKEN": "098caa3708e8c2406cb1a5f0d489b74f3841d939",
+    "BUCKET_NAME": "mybeamline-demo-us-west-2"
+  }
+}

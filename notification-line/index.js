@@ -13,7 +13,8 @@ exports.handler = function(event, context) {
         " but with errors",
         "Failed to deploy application",
         "Failed to deploy configuration",
-        "has failed"
+        "has failed",
+        "FAILED"
     ];
     var warningMessages = [
         "is currently running",

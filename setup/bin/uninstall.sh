@@ -1,4 +1,6 @@
-source ./setup.properties
+cd ../../
+source ./setup/config/setup.properties
+source ./setup/config/lambda.properties
 
 slack_notify_fn_name=${INFRASTRUCTURE_PREFIX}'-slack-notify'
 pipeline_manager_fn_name=${INFRASTRUCTURE_PREFIX}'-pipeline-manager'
@@ -43,15 +45,15 @@ do
   echo "Return code:"${return_code}": deleted lambda function:"${slack_notify_fn_name}
   error_exit ${return_code} "Error while deleting.."${slack_notify_fn_name}
 
-  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 rm s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region} --recursive
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 rm s3://${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region} --recursive
   return_code=$?
-  echo "Return code:"${return_code}": deleted everything from S3 bucket function:"${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
-  error_exit ${return_code} "Error while deleting from S3.."${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+  echo "Return code:"${return_code}": deleted everything from S3 bucket function:"${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}
+  error_exit ${return_code} "Error while deleting from S3.."${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}
 
-  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 rb s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region} --force
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 rb s3://${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region} --force
   return_code=$?
-  echo "Return code:"${return_code}": deleted S3 bucket:"${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
-  error_exit ${return_code} "Error while deleting S3.."${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+  echo "Return code:"${return_code}": deleted S3 bucket:"${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}
+  error_exit ${return_code} "Error while deleting S3.."${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}
 
   aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation delete-stack --stack-name beamline-s3-stack-${region}
   return_code=$?

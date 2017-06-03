@@ -1,5 +1,5 @@
 # Build pipeline-manager lambda function
-cd notification-line
+cd ../../notification-line
 npm run all
 
 cd ../pipeline-manager
@@ -9,7 +9,8 @@ cd ../beamline
 npm run all
 
 cd ../
-source ./setup.properties
+source ./setup/config/setup.properties
+source ./setup/config/lambda.properties
 
 slack_notify_fn_name=${INFRASTRUCTURE_PREFIX}'-slack-notify'
 pipeline_manager_fn_name=${INFRASTRUCTURE_PREFIX}'-pipeline-manager'
@@ -30,22 +31,26 @@ function error_exit
 IFS=',' read -a region_array <<< "${AWS_REGIONS}"
 for region in ${region_array[@]}
 do
+
+node -p 'var fileName="./setup/config/pipeline-manager-env-variables.json"; var file = require(fileName); file.Variables.FUNCTION_PREFIX="'${INFRASTRUCTURE_PREFIX}'"; file.Variables.GIT_TOKEN="'${GITHUB_PERSONAL_TOKEN}'"; file.Variables.BUCKET_NAME="'${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}'";console.log(JSON.stringify(file,null,2)); require("fs").writeFile(fileName, JSON.stringify(file,null,2), (err) => {});'
+node -p 'var fileName="./setup/config/beamline-env-variables.json"; var file = require(fileName); file.Variables.FUNCTION_PREFIX="'${INFRASTRUCTURE_PREFIX}'"; file.Variables.GIT_TOKEN="'${GITHUB_PERSONAL_TOKEN}'"; file.Variables.BUCKET_NAME="'${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}'";console.log(JSON.stringify(file,null,2)); require("fs").writeFile(fileName, JSON.stringify(file,null,2), (err) => {});'
+	
   ## Create S3 bucket if not exists
-  result=`aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 ls s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}`
+  result=`aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 ls s3://${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}`
   statusCode=$?
   if [[ ${statusCode} != 0 ]];
   then
     aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation create-stack \
         --stack-name "beamline-s3-stack-${region}" \
-        --template-body file://create_s3_bucket.json \
+    	--template-body file://./setup/config/create_s3_bucket.json \
         --parameters \
-        ParameterKey=BucketNameParam,ParameterValue=${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+        ParameterKey=BucketNameParam,ParameterValue=${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}
 
     return_code=$?
     echo "Return code:"${return_code}
     error_exit ${return_code} "Error creating S3 stack..."
 
-    echo "Creating S3 bucket with bucket name:"${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}
+    echo "Creating S3 bucket with bucket name:"${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}
     sleep 30
     set -e
     stack_status=`aws --profile ${AWS_PROFILE_NAME} --region ${region} cloudformation describe-stacks --stack-name beamline-s3-stack-${region} --max-items 1 --output text | cut -f 7`
@@ -73,9 +78,9 @@ do
   fi;
 
   ## Upload Beamline lambda functions code to S3 buckets
-  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./pipeline-manager/pipeline-manager-1.0.0.zip s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}/INFRA/pipeline-manager.zip --sse
-  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./notification-line/notification-line-1.0.0.zip s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}/INFRA/notification-line.zip --sse
-  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./beamline/beamline-1.0.0.zip s3://${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region}/INFRA/beamline.zip --sse
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./pipeline-manager/pipeline-manager-1.0.0.zip s3://${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}/INFRA/pipeline-manager.zip --sse
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./notification-line/notification-line-1.0.0.zip s3://${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}/INFRA/notification-line.zip --sse
+  aws --profile ${AWS_PROFILE_NAME} --region ${region} s3 cp ./beamline/beamline-1.0.0.zip s3://${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region}/INFRA/beamline.zip --sse
 
   ## Create IAM role if not exists
   result=`aws --profile ${AWS_PROFILE_NAME} iam get-role --role-name ${iam_role_name}`
@@ -86,9 +91,9 @@ do
     aws --profile ${AWS_PROFILE_NAME} --region ${region}  cloudformation create-stack \
         --capabilities CAPABILITY_NAMED_IAM \
         --stack-name "beamline-iam-role-stack" \
-        --template-body file://create_iam_role.json \
+        --template-body file://./setup/config/create_iam_role.json \
         --parameters \
-        ParameterKey=BucketName,ParameterValue=${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME} \
+        ParameterKey=BucketName,ParameterValue=${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX} \
         ParameterKey=RoleName,ParameterValue=${iam_role_name}
 
     return_code=$?
@@ -137,12 +142,12 @@ do
          --region ${region} \
          --function-name ${slack_notify_fn_name} \
          --role ${role_arn} \
-         --runtime nodejs4.3 \
+    	 --runtime ${NOTIFY_FN_RUNTIME} \
          --handler ${NOTIFY_FN_HANDLER} \
          --description "${NOTIFY_FN_DESC}" \
          --timeout ${NOTIFY_FN_TIMEOUT} \
          --memory-size ${NOTIFY_FN_MEMORY_SIZE} \
-         --code S3Bucket=${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region},S3Key=INFRA/notification-line.zip 1>&2
+         --code S3Bucket=${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region},S3Key=INFRA/notification-line.zip 1>&2
      return_code=$?
      echo "Return code:"${return_code}
      error_exit ${return_code} "Error creating Slack notification lambda function..."
@@ -185,13 +190,13 @@ do
          --region ${region} \
          --function-name ${pipeline_manager_fn_name} \
          --role ${role_arn} \
-         --runtime nodejs4.3 \
+    	 --runtime ${PIPELINE_MGR_FN_RUNTIME} \
          --handler ${PIPELINE_MGR_FN_HANDLER} \
          --description "${PIPELINE_MGR_FN_DESC}" \
          --timeout ${PIPELINE_MGR_FN_TIMEOUT} \
-         --environment file://./pipeline-manager-env-variables.json \
+         --environment file://./setup/config/pipeline-manager-env-variables.json \
          --memory-size ${PIPELINE_MGR_FN_MEMORY_SIZE} \
-         --code S3Bucket=${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region},S3Key=INFRA/pipeline-manager.zip 1>&2
+         --code S3Bucket=${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region},S3Key=INFRA/pipeline-manager.zip 1>&2
      return_code=$?
      echo "Return code:"${return_code}
      error_exit ${return_code} "Error creating Slack notification lambda function..."
@@ -213,7 +218,7 @@ do
         --handler ${PIPELINE_MGR_FN_HANDLER} \
         --description "${PIPELINE_MGR_FN_DESC}" \
         --timeout ${PIPELINE_MGR_FN_TIMEOUT} \
-        --environment file://./pipeline-manager-env-variables.json \
+        --environment file://./setup/config/pipeline-manager-env-variables.json \
         --memory-size ${PIPELINE_MGR_FN_MEMORY_SIZE} 1>&2
     return_code=$?
     echo "Return code:"${return_code}
@@ -234,13 +239,13 @@ do
          --region ${region} \
          --function-name ${beamline_fn_name} \
          --role ${role_arn} \
-         --runtime nodejs4.3 \
+    	 --runtime ${BEAMLINE_FN_RUNTIME} \
          --handler ${BEAMLINE_FN_HANDLER} \
          --description "${BEAMLINE_FN_DESC}" \
          --timeout ${BEAMLINE_FN_TIMEOUT} \
-         --environment file://./beamline-env-variables.json \
+         --environment file://./setup/config/beamline-env-variables.json \
          --memory-size ${BEAMLINE_FN_MEMORY_SIZE} \
-         --code S3Bucket=${INFRASTRUCTURE_PREFIX}'-'${S3_BUCKET_NAME}'-'${region},S3Key=INFRA/beamline.zip 1>&2
+         --code S3Bucket=${S3_BUCKET_NAME}'-'${INFRASTRUCTURE_PREFIX}'-'${region},S3Key=INFRA/beamline.zip 1>&2
      return_code=$?
      echo "Return code:"${return_code}
      error_exit ${return_code} "Error creating Slack notification lambda function..."
@@ -262,7 +267,7 @@ do
         --handler ${BEAMLINE_FN_HANDLER} \
         --description "${BEAMLINE_FN_DESC}" \
         --timeout ${BEAMLINE_FN_TIMEOUT} \
-        --environment file://./beamline-env-variables.json \
+        --environment file://./setup/config/beamline-env-variables.json \
         --memory-size ${BEAMLINE_FN_MEMORY_SIZE} 1>&2
     return_code=$?
     echo "Return code:"${return_code}
@@ -279,7 +284,7 @@ do
     echo "Creating SNS Topic..."
     aws --profile ${AWS_PROFILE_NAME} --region ${region}  cloudformation create-stack \
         --stack-name "beamline-sns-topic-stack-${region}" \
-        --template-body file://create_sns_topic.json \
+        --template-body file://./setup/config/create_sns_topic.json \
         --parameters \
         ParameterKey=lambdaFunctionARN,ParameterValue='arn:aws:lambda:'${region}':'${AWS_ACCOUNT_ID}':function:'${pipeline_manager_fn_name} \
         ParameterKey=snsTopicName,ParameterValue=${sns_topic_name}

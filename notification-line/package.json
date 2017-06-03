@@ -27,7 +27,7 @@
     "url": "git+https://github.com/GaurangBhatt/BeamlineJS.git"
   },
   "author": "gaurang.bhatt04@gmail.com",
-  "license": "ISC",
+  "license": "ApacheV2",
   "bugs": {
     "url": "https://github.com/GaurangBhatt/BeamlineJS/issues"
   },
