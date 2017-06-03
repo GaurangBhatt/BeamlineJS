@@ -2,9 +2,9 @@
   "Variables": {
     "GITHUB_RAW_URL": "https://raw.githubusercontent.com/",
     "GIT_HOST": "github.com",
-    "FUNCTION_PREFIX": "demo",
-    "GIT_TOKEN": "a10a8daa0da28c92edd6151a24b2550e7cbb0fbc",
-    "BUCKET_NAME": "mybeamline-demo-us-east-1",
+    "FUNCTION_PREFIX": "PLACEHOLDER",
+    "GIT_TOKEN": "PLACEHOLDER",
+    "BUCKET_NAME": "PLACEHOLDER",
     "GITHUB_API_URL": "https://github.com/api/v3/"
   }
 }
