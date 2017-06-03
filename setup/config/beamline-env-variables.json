@@ -3,8 +3,8 @@
     "GITHUB_RAW_URL": "https://raw.githubusercontent.com/",
     "GIT_HOST": "github.com",
     "FUNCTION_PREFIX": "demo",
-    "GIT_TOKEN": "098caa3708e8c2406cb1a5f0d489b74f3841d939",
-    "BUCKET_NAME": "mybeamline-demo-us-west-2",
+    "GIT_TOKEN": "a10a8daa0da28c92edd6151a24b2550e7cbb0fbc",
+    "BUCKET_NAME": "mybeamline-demo-us-east-1",
     "GITHUB_API_URL": "https://github.com/api/v3/"
   }
 }

@@ -156,7 +156,7 @@ node -p 'var fileName="./setup/config/beamline-env-variables.json"; var file = r
     aws --profile ${AWS_PROFILE_NAME} lambda update-function-code \
         --function-name ${slack_notify_fn_name} \
         --region ${region} \
-        --s3-bucket ${INFRASTRUCTURE_PREFIX}"-"${S3_BUCKET_NAME}"-"${region} \
+        --s3-bucket ${S3_BUCKET_NAME}"-"${INFRASTRUCTURE_PREFIX}"-"${region} \
         --s3-key INFRA/notification-line.zip 1>&2
     return_code=$?
     echo "Return code:"${return_code}
@@ -205,7 +205,7 @@ node -p 'var fileName="./setup/config/beamline-env-variables.json"; var file = r
     aws --profile ${AWS_PROFILE_NAME} lambda update-function-code \
         --function-name ${pipeline_manager_fn_name} \
         --region ${region} \
-        --s3-bucket ${INFRASTRUCTURE_PREFIX}"-"${S3_BUCKET_NAME}"-"${region} \
+        --s3-bucket ${S3_BUCKET_NAME}"-"${INFRASTRUCTURE_PREFIX}"-"${region} \
         --s3-key INFRA/pipeline-manager.zip 1>&2
     return_code=$?
     echo "Return code:"${return_code}
@@ -254,7 +254,7 @@ node -p 'var fileName="./setup/config/beamline-env-variables.json"; var file = r
     aws --profile ${AWS_PROFILE_NAME} lambda update-function-code \
         --function-name ${beamline_fn_name} \
         --region ${region} \
-        --s3-bucket ${INFRASTRUCTURE_PREFIX}"-"${S3_BUCKET_NAME}"-"${region} \
+        --s3-bucket ${S3_BUCKET_NAME}"-"${INFRASTRUCTURE_PREFIX}"-"${region} \
         --s3-key INFRA/beamline.zip 1>&2
     return_code=$?
     echo "Return code:"${return_code}
@@ -353,3 +353,7 @@ node -p 'var fileName="./setup/config/beamline-env-variables.json"; var file = r
     done
   fi;
 done
+
+git checkout HEAD ./setup/config/pipeline-manager-env-variables.json
+git checkout HEAD ./setup/config/beamline-env-variables.json
+

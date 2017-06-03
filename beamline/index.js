@@ -351,7 +351,7 @@ exports.handler = function (event, context) {
           setFunctionConfig(prodConfig, region);
 
         }
-        const lambda = new LambdaSDK();
+        var lambda = new LambdaSDK();
 
         // blow away the /tmp directory for before and after execution of this lambda function.
         // need to keep this Transient.
