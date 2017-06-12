@@ -23,13 +23,13 @@
 * BeamlinePY - CI/CD pipeline for AWS Lambda function with Python runtime
 
 ## Architecture
-
+![alt text](https://github.com/GaurangBhatt/BeamlineJS/blob/master/images/beamline_arch.png)
 
 ## CI/CD Flow
-
+![alt text](https://github.com/GaurangBhatt/BeamlineJS/blob/master/images/ci_cd_flows.png)
 
 ## Versioning & Aliases
-
+![alt text](https://github.com/GaurangBhatt/BeamlineJS/blob/master/images/version-aliases.png)
 
 
 #Setup Beamline
