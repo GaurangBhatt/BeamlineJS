@@ -32,7 +32,8 @@
 ![alt text](https://github.com/GaurangBhatt/BeamlineJS/blob/master/images/version-aliases.png)
 
 
-#Setup Beamline
+# Setup Beamline
+
 You can setup your own Beamline by following below simple steps. **Please note that for Beamline to work you will have to create accounts using vendor services that may result in $$ cost. Please go through the pricing model of each services offered by the vendors prior to using these services**.
 
 It will create following three AWS Lambda functions:
