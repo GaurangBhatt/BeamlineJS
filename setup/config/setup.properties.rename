@@ -7,26 +7,7 @@ AWS_ACCESS_KEY=<your AWS account's access key>
 AWS_SECRET_KEY=<your AWS account's secret key>
 INFRASTRUCTURE_PREFIX=<value here will be prefixed to all AWS resources>
 GITHUB_PERSONAL_TOKEN=<used for performing Git operations on your repository>
-S3_BUCKET_NAME=<Name of your S3 bucket. After setup your bucket name will be INFRASTRUCTURE_PREFIX-S3_BUCKET_NAME-AWS_REGION.
 AWS_REGIONS=us-east-1,us-west-2
 PRIMARY_AWS_REGION=us-east-1
-REPOSITORY_HOOKS_URLS=https://api.github.com/repos/mybhishi/sample-lambda/hooks,https://api.github.com/repos/GaurangBhatt/sample-lambda/hooks
-AWS_ACCOUNT_ID=
-
-## notification-line function configuration
-NOTIFY_FN_HANDLER=index.handler
-NOTIFY_FN_MEMORY_SIZE=512
-NOTIFY_FN_TIMEOUT=60
-NOTIFY_FN_DESC="Function to send Beamline notification to Slack channels"
-
-## pipeline-manager function configuration
-PIPELINE_MGR_FN_HANDLER=index.handler
-PIPELINE_MGR_FN_MEMORY_SIZE=1536
-PIPELINE_MGR_FN_TIMEOUT=300
-PIPELINE_MGR_FN_DESC="Function manage the Beamline based on GitHub events."
-
-## beamlineJS function configuration
-BEAMLINE_FN_HANDLER=index.handler
-BEAMLINE_FN_MEMORY_SIZE=1536
-BEAMLINE_FN_TIMEOUT=300
-BEAMLINE_FN_DESC="Function manage the Beamline based on GitHub events."
+REPOSITORY_HOOKS_URLS=https://api.github.com/repos/ORG_NAME/REPO_NAME/hooks,https://api.github.com/repos/FORK_ORG_NAME/REPO_NAME/hooks
+AWS_ACCOUNT_ID=<Your AWS Account ID>
