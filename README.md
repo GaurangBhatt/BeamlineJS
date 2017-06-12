@@ -22,6 +22,15 @@
 * BeamlineJ - CI/CD pipeline for AWS Lambda function with Java runtime
 * BeamlinePY - CI/CD pipeline for AWS Lambda function with Python runtime
 
+## Architecture
+
+
+## CI/CD Flow
+
+
+## Versioning & Aliases
+
+
 
 #Setup Beamline
 You can setup your own Beamline by following below simple steps. **Please note that for Beamline to work you will have to create accounts using vendor services that may result in $$ cost. Please go through the pricing model of each services offered by the vendors prior to using these services**.
